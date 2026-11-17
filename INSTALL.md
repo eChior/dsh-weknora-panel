@@ -1,5 +1,7 @@
 # dsh-weknora-panel 安装说明
 
+> 本项目基于 [ikevss/dsh-ima](https://github.com/ikevss/dsh-ima)（MIT License）修改，改动与许可说明见 [NOTICE](./NOTICE)。
+
 把 WeKnora 知识库接进 DeepSeek Harness（DSH）：左侧栏浏览库与文件、pdfjs 原件预览（滚轮翻页，命中段自动跳到第几页并标黄）、会话里回答带可点角标，点角标在**右侧栏**打开原文。
 
 ## 一、包里有什么

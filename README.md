@@ -1,5 +1,7 @@
 # dsh-weknora-panel
 
+> 本项目基于 [**ikevss/dsh-ima**](https://github.com/ikevss/dsh-ima)（MIT License，Copyright (c) 2026 ikevss）修改：把 ima 的数据层整体换成 WeKnora，并新增角标、右侧栏原文、pdfjs 定位等能力。来源与逐项改动见 [NOTICE](./NOTICE)，许可见 [LICENSE](./LICENSE)。
+
 把 [WeKnora](https://weknora.weixin.qq.com) 知识库接进 DeepSeek Harness（DSH）。
 
 - **左侧栏「知识库」面板**：库列表 → 文件列表 → 正文预览；原件用 pdfjs 渲染，滚轮翻页。
@@ -7,7 +9,7 @@
 - **7 个 agent 工具**：服务端一次问答（快）、逐段读原文、检索、看库里有什么。
 - **不改 DSH 本体**：只通过 `dsh.client` 注入界面、`cordis.patch.yml` 挂载自己，出问题从 `bundles` 去掉即可。
 
-> 安装步骤见 [INSTALL.md](./INSTALL.md)。`config.json` 里已预置知识库地址，装上就能用。
+> 安装步骤见 [INSTALL.md](./INSTALL.md)。首次使用在面板右上角 ⚙ 里填知识库地址与 API Key（模板见 `config.example.json`）。
 
 ## 配置
 

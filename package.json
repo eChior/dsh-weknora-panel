@@ -42,7 +42,9 @@
     "config.json",
     "install.mjs",
     "README.md",
-    "INSTALL.md"
+    "INSTALL.md",
+    "NOTICE",
+    "config.example.json"
   ],
   "scripts": {
     "build": "node build/build.mjs",
@@ -52,5 +54,12 @@
   "devDependencies": {
     "@open-file-viewer/core": "1.0.0",
     "esbuild": "^0.24.0"
-  }
+  },
+  "author": "dsh-weknora-panel contributors",
+  "contributors": [
+    {
+      "name": "ikevss",
+      "url": "https://github.com/ikevss"
+    }
+  ]
 }

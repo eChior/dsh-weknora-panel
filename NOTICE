@@ -1,0 +1,44 @@
+# 来源与许可
+
+本仓库（**dsh-weknora-panel**）基于 **dsh-ima** 修改而来：
+
+- 上游项目：https://github.com/ikevss/dsh-ima
+- 上游许可：MIT License，Copyright (c) 2026 ikevss
+
+本项目沿用 MIT 许可，原版权声明保留在 [LICENSE](./LICENSE) 中。
+
+## 改了什么
+
+上游把腾讯 ima 知识库接进 DeepSeek Harness；本项目把它改造成 **WeKnora** 知识库的接入。
+
+**数据层整体替换**
+
+- `lib/ima-client.js`（ima OpenAPI 客户端）、`lib/ima-browser.js`（CDP 取凭证）→ `lib/weknora-client.js`（WeKnora REST + SSE 流式问答）
+- 移除 ima 的 OAuth / CDP 绑定流程，改为在面板里直接填写知识库地址与 API Key
+
+**宿主半 `lib/index.js` 重写**
+
+- 7 个 `weknora_panel_*` agent 工具
+- `/api/weknora/*` 路由（知识库、文件、分块、检索、问答流、引用短码、PDF 页定位、原件转换）
+- 知识库清单的上下文注入（可按会话/每轮/关闭）
+
+**浏览器半 `build/client.src.js`**
+
+- 面板改为「文件 / 问答」，增加分组树、上传（进度 + 解析状态）、下载原件
+- 新增会话内可点角标（`<kb>` 出处 → 短码链接 → 右侧栏原文）
+- 新增右侧栏「原文」tab：pdfjs 渲染、按句定位标黄、滚动按需渲染
+
+**新增文件**
+
+`vendor/pdfjs/`、`install.mjs`、`install.cmd`、`config.example.json`、`test/smoke.js`、`NOTICE`
+
+**沿用自上游的部分**
+
+界面骨架与 CSS 命名（`.dsh-ima-*`）、图标组件、markdown 渲染、`ctx.slots` / `cordis.patch.yml` 的注册方式 —— 这些源自 dsh-ima，版权归原作者（Copyright (c) 2026 ikevss）。
+
+## 许可义务
+
+MIT 许可要求：再分发时保留版权声明与许可声明。因此
+
+- `LICENSE` 保留上游版权行，不得删除；
+- 若你基于本项目继续分发，请同时保留 `LICENSE` 与本 `NOTICE`。

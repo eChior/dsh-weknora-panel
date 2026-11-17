@@ -1,0 +1,56 @@
+{
+  "name": "dsh-weknora-panel",
+  "version": "1.1.3",
+  "description": "WeKnora 知识库接入 DeepSeek Harness：侧边栏浏览知识库与文件、pdfjs 原件预览与命中定位，会话里可点角标直开原文，并让 agent 自动检索、引用原文",
+  "main": "lib/index.js",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "weknora",
+    "knowledge-base",
+    "plugin"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ],
+      "platform": "web"
+    }
+  },
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "vendor",
+    "build",
+    "cordis.patch.yml",
+    "config.json",
+    "install.mjs",
+    "README.md",
+    "INSTALL.md"
+  ],
+  "scripts": {
+    "build": "node build/build.mjs",
+    "test": "node test/smoke.js",
+    "postinstall": ""
+  },
+  "devDependencies": {
+    "@open-file-viewer/core": "1.0.0",
+    "esbuild": "^0.24.0"
+  }
+}

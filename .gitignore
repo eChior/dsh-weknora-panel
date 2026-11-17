@@ -1,0 +1,8 @@
+node_modules/
+# 用户自己的知识库地址/Key，不进仓库；模板见 config.example.json
+config.json
+lib/client.js
+test/bundle.js
+test/pdfbundle.js
+*.log
+.DS_Store

@@ -56,6 +56,8 @@ node test/smoke.js          # 冒烟：连真实 WeKnora 跑一遍全部 API
 ```
 
 改完记得：`lib/client.js` 重新构建 → 复制到 profile 的 `node_modules/dsh-weknora-panel/lib/` → 重启 DSH。
+
+> **产物体积**：`lib/client.js` 已随仓库提交（`dsh.client` 指向它，缺了 DSH 会启动失败）。改了 `build/client.src.js` 或 `build/viewer.src.js` 之后，务必 `node build/build.mjs` 并**把 `lib/client.js` 一起提交**，否则从仓库安装的人拿到的是旧界面。
 如果重启后没变化，先看 profile 里的 `cordis.patch.yml` 是不是被改成了 `- insert: []`（那等于禁用插件）。
 
 ## 已知限制

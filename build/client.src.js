@@ -202,6 +202,9 @@ var CSS = [
   '.dsh-ima-hist-i{font-size:12px;line-height:1.45;padding:5px 7px;border-radius:6px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.8}',
   '.dsh-ima-hist-i:hover{background:var(--dsw-alias-bg-layer-2,#f2f4f8);opacity:1}',
   '.dsh-ima-hist-on{background:var(--dsw-alias-bg-layer-3,#e8f0fe);opacity:1;font-weight:500}',
+  '.dsh-ima-embed{flex:1;display:flex;min-height:0;min-width:0;padding:0}',
+  '.dsh-ima-embed-frame{flex:1;width:100%;height:100%;border:0;background:#fff;border-radius:6px}',
+  '.dsh-ima-qa-empty{display:flex;align-items:center;justify-content:center;opacity:.5;font-size:13px}',
   '.dsh-ima-chat-main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;padding:10px 12px 12px}',
   '.dsh-ima-chat-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex:none}',
   '.dsh-ima-chat-hint{font-size:11px;opacity:.45;margin-left:auto}',
@@ -1301,6 +1304,31 @@ function QaPanel(props) {
   )
 }
 
+// 问答区入口：配了 WeKnora embed 渠道地址，就直接嵌它自己的前端页面
+// （界面、交互、引用抽屉全是 WeKnora 的代码，我们只负责给出这个位置）。
+function QaPane(props) {
+  var st = React.useState(null)
+  var url = st[0], setUrl = st[1]
+  React.useEffect(function () {
+    api('/embed')
+      .then(function (r) { setUrl((r && r.ok && r.url) || '') })
+      .catch(function () { setUrl('') })
+  }, [])
+  if (url === null) {
+    return h('div', { className: 'dsh-ima-qa-pane dsh-ima-qa-empty' }, '加载中…')
+  }
+  if (url) {
+    return h('div', { className: 'dsh-ima-qa-pane dsh-ima-embed' },
+      h('iframe', {
+        className: 'dsh-ima-embed-frame',
+        src: url,
+        title: 'WeKnora 问答',
+        referrerPolicy: 'no-referrer',
+      }))
+  }
+  return h(QaPanel, props)
+}
+
 function WeKnoraPage(props) {
   var panelActive = !props || props.active !== false
   var st = React.useState(null); var status = st[0], setStatus = st[1]
@@ -1677,7 +1705,7 @@ function WeKnoraPage(props) {
     // 左：问答（WeKnora 原生体验，可切智能体）　右：知识库（库/分组/文件/预览）
     h('div', { className: 'dsh-ima-split' },
       h('div', { className: 'dsh-ima-qa-pane' },
-        h(QaPanel, {
+        h(QaPane, {
           kbId: curKb && curKb.id,
           kbName: curKb && curKb.name,
           agentId: agentId,
@@ -1888,6 +1916,7 @@ function SetupDialog(props) {
   var es = React.useState(''); var err = es[0], setErr = es[1]
   var ms = React.useState(''); var note = ms[0], setNote = ms[1]
   var cms = React.useState(s.contextMode || 'once'); var contextMode = cms[0], setContextMode = cms[1]
+  var eus = React.useState(s.embedUrl || ''); var embedUrl = eus[0], setEmbedUrl = eus[1]
   var rts = React.useState(''); var rtText = rts[0], setRtText = rts[1]
   var rto = React.useState(null); var rtOut = rto[0], setRtOut = rto[1]
   var rtb = React.useState(false); var rtBusy = rtb[0], setRtBusy = rtb[1]
@@ -1907,6 +1936,22 @@ function SetupDialog(props) {
   React.useEffect(function () {
     if (s.contextMode) setContextMode(s.contextMode)
   }, [s.contextMode])
+
+  React.useEffect(function () {
+    if (s.embedUrl !== undefined) setEmbedUrl(s.embedUrl || '')
+  }, [s.embedUrl])
+
+  var saveEmbed = function () {
+    api('/embed', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ url: String(embedUrl || '').trim() }),
+    }).then(function (r) {
+      if (!r || !r.ok) { setErr((r && r.message) || '保存失败'); return }
+      setNote(r.url ? '嵌入地址已保存' : '已清空，问答区回到自绘界面')
+      if (props.onSaved) props.onSaved()
+    }).catch(function (e) { setErr(String((e && e.message) || e)) })
+  }
 
   var save = function () {
     if (saving) return
@@ -1975,6 +2020,21 @@ function SetupDialog(props) {
     ),
     h('div', { className: 'dsh-ima-note', style: { marginTop: '4px', fontSize: '.85em' } },
       '这段说明只影响 agent 会不会被提醒“优先用 weknora_panel_ask”，不影响 7 个工具本身。'),
+
+    h('label', { className: 'dsh-ima-lbl' }, 'WeKnora 原生界面（embed 渠道，可选）'),
+    h('div', { className: 'dsh-ima-note', style: { fontSize: '.85em', marginBottom: '6px' } },
+      '在 WeKnora「智能体 → 网页嵌入」建一个渠道（允许来源填 *），把嵌入地址粘到这里 —— 问答区就直接用 WeKnora 自己的前端渲染，界面和交互都是它的代码。'),
+    h('div', { style: { display: 'flex', gap: '6px', alignItems: 'center' } },
+      h('input', {
+        className: 'dsh-ima-inp',
+        style: { flex: '1', minWidth: '0' },
+        value: embedUrl,
+        spellCheck: false,
+        placeholder: 'http://<server>:8088/embed/<channelId>?token=...',
+        onChange: function (e) { setEmbedUrl(e.target.value) },
+      }),
+      h('button', { className: 'dsh-ima-btn', style: { flex: 'none' }, onClick: saveEmbed }, '保存')
+    ),
 
     h('div', { style: { borderTop: '1px solid rgba(0,0,0,.08)', marginTop: '12px', paddingTop: '10px' } },
       h('label', { className: 'dsh-ima-lbl' }, '脱敏自检'),

@@ -1973,7 +1973,9 @@ function citeTabParams(props) {
     var info = props.useTabInfo ? props.useTabInfo() : null
     var tab = info && info.tab
     var nav = tab && tab.navigation
-    return (nav && nav.params) || {}
+    // DSH 的 tab.navigation 是 snapshot store（有 getSnapshot），不是快照值本身
+    var snap = nav && typeof nav.getSnapshot === 'function' ? nav.getSnapshot() : nav
+    return (snap && snap.params) || (tab && tab.params) || {}
   } catch (e) { return {} }
 }
 
@@ -2083,6 +2085,36 @@ function mergeRects(rects) {
   return out
 }
 
+// 打开过的 PDF 文档留在内存里复用：反复点不同角标看同一份文档时，
+// 不用每次都重新下载 + 解析（大文档这一步就是"打开原件极慢"的主因）。
+// 只留最近 3 份，超出的销毁，别把内存吃光。
+var PDF_DOCS = []
+var PDF_DOC_LIMIT = 3
+
+function loadPdfDoc(id) {
+  for (var i = 0; i < PDF_DOCS.length; i++) {
+    if (PDF_DOCS[i].id === id) {
+      var hit = PDF_DOCS.splice(i, 1)[0]
+      PDF_DOCS.push(hit)
+      return hit.promise
+    }
+  }
+  var promise = loadPdfjs().then(function (pdfjs) {
+    if (!pdfjs) throw new Error('pdfjs 没加载上')
+    return pdfjs.getDocument({ url: API + '/pdf?id=' + encodeURIComponent(id) }).promise
+  })
+  var entry = { id: id, promise: promise }
+  PDF_DOCS.push(entry)
+  while (PDF_DOCS.length > PDF_DOC_LIMIT) {
+    var old = PDF_DOCS.shift()
+    try {
+      Promise.resolve(old.promise).then(function (d) { try { d.destroy() } catch (e) { /* 忽略 */ } },
+        function () { /* 加载失败过，无需销毁 */ })
+    } catch (e) { /* 忽略 */ }
+  }
+  return promise
+}
+
 function PdfView(props) {
   var id = props.id
   var wantPage = props.page || 0
@@ -2100,20 +2132,17 @@ function PdfView(props) {
   React.useEffect(function () {
     var alive = true
     setS({ loading: true, error: '', num: 0, cur: 1, ready: false })
-    loadPdfjs().then(function (pdfjs) {
-      return pdfjs.getDocument({ url: API + '/pdf?id=' + encodeURIComponent(id) }).promise
-    }).then(function (doc) {
-      if (!alive) { try { doc.destroy() } catch (e) { /* 忽略 */ } return }
+    loadPdfDoc(id).then(function (doc) {
+      if (!alive) return
       docRef.current = doc
       setS({ loading: false, error: '', num: doc.numPages, cur: 1, ready: true })
     }).catch(function (e) {
       if (alive) setS({ loading: false, error: msg(e), num: 0, cur: 1, ready: false })
     })
     return function () {
+      // 文档本体交给上面的 PDF_DOCS 缓存管理，这里只断开引用
       alive = false
-      var d = docRef.current
       docRef.current = null
-      if (d) { try { d.destroy() } catch (e) { /* 忽略 */ } }
     }
   }, [id])
 
@@ -2548,7 +2577,7 @@ function LiveAnswer(props) {
   var udHook = (props && props.useDisclosure) || null
   var disc = udHook ? udHook() : null
   React.useEffect(function () {
-    if (disc && disc.expanded === false) {
+    if (disc && disc.expanded !== true) {
       try { disc.toggle() } catch (e) { /* 展开失败就保持原状 */ }
     }
   }, [])

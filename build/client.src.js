@@ -202,32 +202,31 @@ var CSS = [
   '.dsh-ima-hist-i{font-size:12px;line-height:1.45;padding:5px 7px;border-radius:6px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.8}',
   '.dsh-ima-hist-i:hover{background:var(--dsw-alias-bg-layer-2,#f2f4f8);opacity:1}',
   '.dsh-ima-hist-on{background:var(--dsw-alias-bg-layer-3,#e8f0fe);opacity:1;font-weight:500}',
-  '.dsh-ima-embed{flex:1;display:flex;min-height:0;min-width:0;padding:0}',
-  '.dsh-ima-embed-frame{flex:1;width:100%;height:100%;border:0;background:#fff;border-radius:6px}',
   '.dsh-ima-qa-empty{display:flex;align-items:center;justify-content:center;opacity:.5;font-size:13px}',
   '.dsh-ima-chat-main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;padding:10px 12px 12px}',
   '.dsh-ima-chat-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex:none}',
   '.dsh-ima-chat-hint{font-size:11px;opacity:.45;margin-left:auto}',
-  '.dsh-ima-msgs{flex:1;min-height:0;overflow:auto;padding:2px 2px 8px;display:flex;flex-direction:column;gap:12px}',
+  '.dsh-ima-msgs{flex:1;min-height:0;overflow:auto;padding:0 20px 12px;display:flex;flex-direction:column;gap:16px}',
+  '.dsh-ima-msgs>*{width:100%;max-width:960px;margin:0 auto}',
   '.dsh-ima-msg{display:flex;flex-direction:column;gap:4px;max-width:100%}',
   '.dsh-ima-msg-u{align-items:flex-end}',
-  '.dsh-ima-msg-u .dsh-ima-bubble{max-width:86%;background:var(--dsw-alias-bg-layer-2,#eef4ff);color:inherit;border-radius:12px 12px 4px 12px;padding:8px 12px;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word}',
+  '.dsh-ima-msg-u .dsh-ima-bubble{width:max-content;max-width:min(76%,820px);margin-left:auto;background:#f3f3f3;border-radius:9px;padding:8px 12px;font-size:15px;line-height:1.6;white-space:pre-wrap;word-break:break-word}',
   '.dsh-ima-msg-a{align-items:stretch}',
-  '.dsh-ima-ans{font-size:13px;line-height:1.75}',
+  '.dsh-ima-ans{font-size:15px;line-height:1.75;max-width:100%}',
   '.dsh-ima-msg-bar{display:flex;align-items:center;gap:10px;margin-top:2px}',
   '.dsh-ima-typing{display:inline-flex;align-items:center;gap:6px;font-size:12px;opacity:.6}',
   '.dsh-ima-typing:before{content:"";width:10px;height:10px;border-radius:50%;border:2px solid currentColor;border-top-color:transparent;animation:dsh-ima-spin .8s linear infinite}',
   '@keyframes dsh-ima-spin{to{transform:rotate(360deg)}}',
   '.dsh-ima-welcome{margin:auto;max-width:460px;text-align:center;padding:24px 12px}',
-  '.dsh-ima-welcome-t{font-size:16px;font-weight:600;margin-bottom:6px}',
-  '.dsh-ima-welcome-s{font-size:12.5px;opacity:.6;line-height:1.7;margin-bottom:16px}',
+  '.dsh-ima-welcome-t{font-size:20px;font-weight:600;margin-bottom:8px}',
+  '.dsh-ima-welcome-s{font-size:14px;opacity:.6;line-height:1.7;margin-bottom:20px}',
   '.dsh-ima-sq{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:left}',
-  '.dsh-ima-sq-card{border:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.12));background:var(--dsw-alias-bg-layer-2,#fff);color:inherit;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.5;text-align:left;cursor:pointer;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}',
-  '.dsh-ima-sq-card:hover{border-color:var(--dsw-alias-border-brand,#3b82f6);background:var(--dsw-alias-bg-layer-3,#f7faff)}',
+  '.dsh-ima-sq-card{border:1px solid #dcdcdc;background:#fff;color:inherit;border-radius:9px;padding:10px 12px;font-size:14px;line-height:1.5;text-align:left;cursor:pointer;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}',
+  '.dsh-ima-sq-card:hover{border-color:#0052d9;color:#0052d9}',
   '.dsh-ima-composer{flex:none;display:flex;gap:8px;align-items:flex-end;padding-top:8px;border-top:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.08))}',
-  '.dsh-ima-ta{flex:1;min-height:44px;max-height:160px;resize:none;border-radius:8px;border:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.14));background:var(--dsw-alias-bg-layer-2,#fff);color:inherit;font-size:13px;line-height:1.6;padding:8px 10px;font-family:inherit}',
-  '.dsh-ima-ta:focus{outline:none;border-color:var(--dsw-alias-border-brand,#3b82f6)}',
-  '.dsh-ima-send{flex:none;height:32px;padding:0 14px;border-radius:8px;border:none;background:#3b82f6;color:#fff;font-size:13px;cursor:pointer}',
+  '.dsh-ima-ta{flex:1;min-height:46px;max-height:180px;resize:none;border-radius:9px;border:1px solid #dcdcdc;background:#fff;color:inherit;font-size:15px;line-height:1.6;padding:10px 12px;font-family:inherit}',
+  '.dsh-ima-ta:focus{outline:none;border-color:#0052d9}',
+  '.dsh-ima-send{flex:none;height:34px;padding:0 16px;border-radius:9px;border:none;background:#0052d9;color:#fff;font-size:14px;cursor:pointer}',
   '.dsh-ima-send:disabled{opacity:.45;cursor:default}',
   '.dsh-ima-stop{background:#ef4444}',
   '.dsh-ima-tab{border:0;background:none;font:inherit;font-size:.9em;color:var(--dsw-alias-label-secondary,#666);padding:7px 12px;cursor:pointer;border-radius:6px 6px 0 0}',
@@ -1304,31 +1303,8 @@ function QaPanel(props) {
   )
 }
 
-// 问答区入口：配了 WeKnora embed 渠道地址，就直接嵌它自己的前端页面
-// （界面、交互、引用抽屉全是 WeKnora 的代码，我们只负责给出这个位置）。
+// 问答区：直接用 WeKnora 的接口渲染（不自造数据层）。
 function QaPane(props) {
-  var st = React.useState(null)
-  var url = st[0], setUrl = st[1]
-  React.useEffect(function () {
-    api('/embed')
-      .then(function (r) { setUrl((r && r.ok && r.url) || '') })
-      .catch(function () { setUrl('') })
-  }, [])
-  if (url === null) {
-    return h('div', { className: 'dsh-ima-qa-pane dsh-ima-qa-empty' }, '加载中…')
-  }
-  if (url) {
-    // 走宿主的同源代理：填完整地址也行，这里只取它的路径部分再接上 /api/weknora/ui
-    var src = String(url).replace(/^https?:\/\/[^/]+/i, '')
-    if (src.charAt(0) !== '/') src = '/' + src
-    return h('div', { className: 'dsh-ima-qa-pane dsh-ima-embed' },
-      h('iframe', {
-        className: 'dsh-ima-embed-frame',
-        src: src,
-        title: 'WeKnora 问答',
-        allow: 'clipboard-write; fullscreen',
-      }))
-  }
   return h(QaPanel, props)
 }
 
@@ -1919,7 +1895,6 @@ function SetupDialog(props) {
   var es = React.useState(''); var err = es[0], setErr = es[1]
   var ms = React.useState(''); var note = ms[0], setNote = ms[1]
   var cms = React.useState(s.contextMode || 'once'); var contextMode = cms[0], setContextMode = cms[1]
-  var eus = React.useState(s.embedUrl || ''); var embedUrl = eus[0], setEmbedUrl = eus[1]
   var rts = React.useState(''); var rtText = rts[0], setRtText = rts[1]
   var rto = React.useState(null); var rtOut = rto[0], setRtOut = rto[1]
   var rtb = React.useState(false); var rtBusy = rtb[0], setRtBusy = rtb[1]
@@ -1939,44 +1914,6 @@ function SetupDialog(props) {
   React.useEffect(function () {
     if (s.contextMode) setContextMode(s.contextMode)
   }, [s.contextMode])
-
-  React.useEffect(function () {
-    if (s.embedUrl !== undefined) setEmbedUrl(s.embedUrl || '')
-  }, [s.embedUrl])
-
-  var saveEmbed = function () {
-    api('/embed', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ url: String(embedUrl || '').trim() }),
-    }).then(function (r) {
-      if (!r || !r.ok) { setErr((r && r.message) || '保存失败'); return }
-      setNote(r.url ? '嵌入地址已保存' : '已清空，问答区回到自绘界面')
-      if (props.onSaved) props.onSaved()
-    }).catch(function (e) { setErr(String((e && e.message) || e)) })
-  }
-
-  var save = function () {
-    if (saving) return
-    var b = String(baseUrl || '').trim()
-    var k = String(apiKey || '').trim()
-    if (!b) { setErr('Base URL 不能为空'); return }
-    if (!k && !s.keyMasked) { setErr('API Key 不能为空'); return }
-    setSaving(true); setErr(''); setNote('')
-    api('/config', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ baseUrl: b, apiKey: k, contextMode: contextMode }),
-    }).then(function (r) {
-      if (!r || !r.ok) { setErr((r && r.message) || '保存失败'); return }
-      setApiKey('')
-      setNote(r.reachable
-        ? '已保存，连接正常（' + (r.kbCount || 0) + ' 个知识库）'
-        : ('已保存，但连不上：' + (r.error || '未知原因')))
-      if (props.onSaved) props.onSaved()
-    }).catch(function (e) { setErr(String((e && e.message) || e)) })
-      .then(function () { setSaving(false) })
-  }
 
   var tone = s.configured
     ? (reachable ? 'var(--dsw-alias-status-success,#1a9e6a)' : 'var(--dsw-alias-status-danger,#d93838)')
@@ -2023,21 +1960,6 @@ function SetupDialog(props) {
     ),
     h('div', { className: 'dsh-ima-note', style: { marginTop: '4px', fontSize: '.85em' } },
       '这段说明只影响 agent 会不会被提醒“优先用 weknora_panel_ask”，不影响 7 个工具本身。'),
-
-    h('label', { className: 'dsh-ima-lbl' }, 'WeKnora 原生界面（embed 渠道，可选）'),
-    h('div', { className: 'dsh-ima-note', style: { fontSize: '.85em', marginBottom: '6px' } },
-      '在 WeKnora「智能体 → 网页嵌入」建一个渠道（允许来源随便填一个，比如 http://127.0.0.1:9940，反代会去掉它的 CSP），把生成的嵌入地址粘这里 —— 问答区就直接用 WeKnora 自己的前端渲染。'),
-    h('div', { style: { display: 'flex', gap: '6px', alignItems: 'center' } },
-      h('input', {
-        className: 'dsh-ima-inp',
-        style: { flex: '1', minWidth: '0' },
-        value: embedUrl,
-        spellCheck: false,
-        placeholder: 'http://<server>:8088/embed/<channelId>?token=...',
-        onChange: function (e) { setEmbedUrl(e.target.value) },
-      }),
-      h('button', { className: 'dsh-ima-btn', style: { flex: 'none' }, onClick: saveEmbed }, '保存')
-    ),
 
     h('div', { style: { borderTop: '1px solid rgba(0,0,0,.08)', marginTop: '12px', paddingTop: '10px' } },
       h('label', { className: 'dsh-ima-lbl' }, '脱敏自检'),

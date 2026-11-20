@@ -192,7 +192,17 @@ var CSS = [
   '.dsh-ima-sel:focus{outline:none;border-color:var(--dsw-alias-border-brand,#3b82f6)}',
   '.dsh-ima-qa-hint{font-size:11px;opacity:.45;margin-left:auto}',
   // 问答区（照 WeKnora 聊天页：消息流 + 底部 composer）
-  '.dsh-ima-chat{flex:1;display:flex;flex-direction:column;min-height:0;min-width:0;padding:10px 12px 12px}',
+  '.dsh-ima-chat{flex:1;display:flex;flex-direction:column;min-height:0;min-width:0;padding:0}',
+  '.dsh-ima-chat-inner{flex:1;display:flex;min-height:0;min-width:0}',
+  '.dsh-ima-hist{width:158px;flex:none;border-right:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.08));overflow:auto;padding:10px 8px}',
+  '.dsh-ima-new{width:100%;height:28px;border-radius:7px;border:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.12));background:var(--dsw-alias-bg-layer-2,#fff);color:inherit;font-size:12px;cursor:pointer;margin-bottom:10px}',
+  '.dsh-ima-new:hover{border-color:var(--dsw-alias-border-brand,#3b82f6)}',
+  '.dsh-ima-hist-g{margin-bottom:10px}',
+  '.dsh-ima-hist-h{font-size:11px;opacity:.45;padding:0 4px 4px}',
+  '.dsh-ima-hist-i{font-size:12px;line-height:1.45;padding:5px 7px;border-radius:6px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.8}',
+  '.dsh-ima-hist-i:hover{background:var(--dsw-alias-bg-layer-2,#f2f4f8);opacity:1}',
+  '.dsh-ima-hist-on{background:var(--dsw-alias-bg-layer-3,#e8f0fe);opacity:1;font-weight:500}',
+  '.dsh-ima-chat-main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0;padding:10px 12px 12px}',
   '.dsh-ima-chat-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex:none}',
   '.dsh-ima-chat-hint{font-size:11px;opacity:.45;margin-left:auto}',
   '.dsh-ima-msgs{flex:1;min-height:0;overflow:auto;padding:2px 2px 8px;display:flex;flex-direction:column;gap:12px}',
@@ -1009,6 +1019,7 @@ function QaPanel(props) {
   var es = React.useState(''); var err = es[0], setErr = es[1]
   var qs = React.useState(''); var q = qs[0], setQ = qs[1]
   var sqs = React.useState([]); var sq = sqs[0], setSq = sqs[1]
+  var ses = React.useState([]); var sessions = ses[0], setSessions = ses[1]
   var boxRef = React.useRef(null)
   var ctrlRef = React.useRef(null)
 
@@ -1032,6 +1043,54 @@ function QaPanel(props) {
   }
 
   React.useEffect(function () { loadSuggested() }, [props.agentId, props.kbId])
+
+  // 会话历史：和 WeKnora 左侧列表同一个接口（GET /sessions）
+  var loadSessions = function () {
+    return api('/sessions?pageSize=40')
+      .then(function (r) { setSessions((r && r.ok && r.sessions) || []) })
+      .catch(function () { setSessions([]) })
+  }
+  React.useEffect(function () { loadSessions() }, [])
+
+  var openSession = function (s) {
+    if (!s || !s.id) return
+    if (ctrlRef.current) { try { ctrlRef.current.abort() } catch (e) { /* 忽略 */ } }
+    setErr('')
+    setSid(s.id)
+    setMsgs([{ id: 'loading', role: 'assistant', content: '', streaming: true, elapsedMs: 0 }])
+    return api('/messages?sid=' + encodeURIComponent(s.id) + '&limit=50')
+      .then(function (r) {
+        var list = (r && r.ok && r.messages) || []
+        setMsgs(list.map(function (m, i) {
+          return {
+            id: m.id || ('h' + i),
+            role: m.role === 'user' ? 'user' : 'assistant',
+            content: m.content || '',
+            streaming: false,
+            elapsedMs: 0,
+          }
+        }))
+      })
+      .catch(function (e) { setErr(String((e && e.message) || e)); setMsgs([]) })
+  }
+
+  var sessionGroups = (function () {
+    var now = Date.now()
+    var buckets = [
+      { label: '今天', test: function (t) { return now - t < 86400000 } },
+      { label: '近 7 天', test: function (t) { return now - t < 7 * 86400000 } },
+      { label: '近 30 天', test: function (t) { return now - t < 30 * 86400000 } },
+      { label: '更早', test: function () { return true } },
+    ]
+    var out = buckets.map(function (b) { return { label: b.label, items: [] } })
+    sessions.forEach(function (s2) {
+      var t = s2.updatedAt ? new Date(s2.updatedAt).getTime() : 0
+      for (var i = 0; i < buckets.length; i++) {
+        if (buckets[i].test(t)) { out[i].items.push(s2); break }
+      }
+    })
+    return out.filter(function (g) { return g.items.length })
+  })()
 
   var openCite = function (cite) {
     if (!cite || !cite.chunkId) return
@@ -1122,6 +1181,7 @@ function QaPanel(props) {
         if (tick) { clearTimeout(tick); tick = null }
         patch({ streaming: false, elapsedMs: Date.now() - startedAt })
         setBusy(false)
+        loadSessions()
       })
       .catch(function (e) {
         if (tick) { clearTimeout(tick); tick = null }
@@ -1147,6 +1207,23 @@ function QaPanel(props) {
   var empty = msgs.length === 0
 
   return h('div', { className: 'dsh-ima-chat' },
+    h('div', { className: 'dsh-ima-chat-inner' },
+      h('div', { className: 'dsh-ima-hist' },
+        h('button', { className: 'dsh-ima-new', onClick: newChat }, '＋ 新对话'),
+        sessionGroups.map(function (g) {
+          return h('div', { key: g.label, className: 'dsh-ima-hist-g' },
+            h('div', { className: 'dsh-ima-hist-h' }, g.label),
+            g.items.map(function (s2) {
+              return h('div', {
+                key: s2.id,
+                className: 'dsh-ima-hist-i' + (s2.id === sid ? ' dsh-ima-hist-on' : ''),
+                title: s2.title,
+                onClick: function () { openSession(s2) },
+              }, s2.title)
+            }))
+        })
+      ),
+      h('div', { className: 'dsh-ima-chat-main' },
     h('div', { className: 'dsh-ima-chat-top' },
       h('select', {
         className: 'dsh-ima-sel',
@@ -1218,6 +1295,8 @@ function QaPanel(props) {
           onClick: function () { send() },
           disabled: !String(q).trim(),
         }, '发送'),
+    ),
+      ),
     ),
   )
 }

@@ -250,7 +250,8 @@ var CSS = [
   '.dsh-ima-ans table{border-collapse:collapse;margin:10px 0;font-size:.88em;max-width:100%}',
   '.dsh-ima-ans th,.dsh-ima-ans td{border:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.12));padding:5px 8px;text-align:left;vertical-align:top}',
   '.dsh-ima-ans th{background:var(--dsw-alias-bg-secondary,#f7f9fc);font-weight:600}',
-  '.dsh-ima-ans h1,.dsh-ima-ans h2,.dsh-ima-ans h3,.dsh-ima-ans h4{font-size:1em;margin:14px 0 6px}'
+  '.dsh-ima-ans h1,.dsh-ima-ans h2,.dsh-ima-ans h3,.dsh-ima-ans h4{font-size:1em;margin:14px 0 6px}',
+  '.dsh-ima-reader-frame{width:100%;height:100%;min-height:420px;border:0;background:#fff;border-radius:4px}',
 ].join('')
 
 var CSS_TAG_ID = 'dsh-weknora/panel.css'
@@ -1611,8 +1612,9 @@ function WeKnoraPage(props) {
       // 换成 iframe 会带上浏览器自带的「上一页/下一页」工具条，样式也不一致。
       if (previewIsOffice && officeOn) {
         previewBody = h('div', { className: 'dsh-ima-nos' },
-          h(PdfView, {
-            id: preview.file.id,
+          h(ReaderFrame, {
+            kbId: preview.file.knowledge_base_id || preview.file.kbId || '',
+            name: preview.file.title || preview.file.file_name || preview.file.id,
             page: preview.page || 0,
             needle: preview.focusContent || '',
           }))
@@ -2716,6 +2718,20 @@ function PdfView(props) {
     s.num ? h('div', { className: 'dsh-ima-pdfno dsh-ima-pdfno-float' }, s.cur + ' / ' + s.num) : null)
 }
 
+// 原件预览：嵌 paper-reader 的阅读器页面（pdf.js 渲染 / 缩放 / 滚轮翻页 / 命中段高亮）
+function ReaderFrame(props) {
+  var kbId = props.kbId || ''
+  var name = props.name || ''
+  var qs = 'topic=' + encodeURIComponent(kbId) + '&name=' + encodeURIComponent(name)
+  if (props.page) qs += '&page=' + props.page
+  if (props.needle) qs += '&q=' + encodeURIComponent(String(props.needle).slice(0, 200))
+  return h('iframe', {
+    className: 'dsh-ima-reader-frame',
+    src: API + '/reader/?' + qs,
+    title: name || '原件预览',
+  })
+}
+
 function CiteTabBody(props) {
   var p = citeTabParams(props)
   var chunkId = p.chunkId || ''
@@ -2819,8 +2835,9 @@ function CiteTabBody(props) {
       ? h('div', { className: 'dsh-ima-citetab-b dsh-ima-nos' },
           !pageReady
             ? h('div', { className: 'dsh-ima-note' }, '正在定位原文所在页…')
-            : h(PdfView, {
-              id: s.knowledgeId,
+            : h(ReaderFrame, {
+              kbId: s.kbId || '',
+              name: s.doc || s.knowledgeId || '',
               page: located ? page : 0,
               needle: located && hitItem ? String(hitItem.content || '') : '',
             }))
@@ -3012,7 +3029,7 @@ exports.__dev = {
   WeKnoraPage: WeKnoraPage,
   SetupDialog: SetupDialog,
   bindCiteLinks: bindCiteLinks,
-  decorateCiteMarks: decorateCiteMarks,
+  decorateCiteMarks: decorateCiteMarks, ReaderFrame: ReaderFrame,
   setLedger: function (cites) { CITE_LEDGER = { cites: cites || [], at: Date.now() } },
   css: CSS,
 }

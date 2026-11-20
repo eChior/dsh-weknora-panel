@@ -1915,6 +1915,28 @@ function SetupDialog(props) {
     if (s.contextMode) setContextMode(s.contextMode)
   }, [s.contextMode])
 
+  var save = function () {
+    if (saving) return
+    var b = String(baseUrl || '').trim()
+    var k = String(apiKey || '').trim()
+    if (!b) { setErr('Base URL 不能为空'); return }
+    if (!k && !s.keyMasked) { setErr('API Key 不能为空'); return }
+    setSaving(true); setErr(''); setNote('')
+    api('/config', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ baseUrl: b, apiKey: k, contextMode: contextMode }),
+    }).then(function (r) {
+      if (!r || !r.ok) { setErr((r && r.message) || '保存失败'); return }
+      setApiKey('')
+      setNote(r.reachable
+        ? '已保存，连接正常（' + (r.kbCount || 0) + ' 个知识库）'
+        : ('已保存，但连不上：' + (r.error || '未知原因')))
+      if (props.onSaved) props.onSaved()
+    }).catch(function (e) { setErr(String((e && e.message) || e)) })
+      .then(function () { setSaving(false) })
+  }
+
   var tone = s.configured
     ? (reachable ? 'var(--dsw-alias-status-success,#1a9e6a)' : 'var(--dsw-alias-status-danger,#d93838)')
     : 'var(--dsw-alias-label-secondary,#666)'

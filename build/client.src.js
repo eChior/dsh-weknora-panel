@@ -1321,7 +1321,6 @@ function QaPane(props) {
     // 走宿主的同源代理：填完整地址也行，这里只取它的路径部分再接上 /api/weknora/ui
     var src = String(url).replace(/^https?:\/\/[^/]+/i, '')
     if (src.charAt(0) !== '/') src = '/' + src
-    if (src.indexOf('/api/weknora/ui/') !== 0) src = '/api/weknora/ui' + src
     return h('div', { className: 'dsh-ima-qa-pane dsh-ima-embed' },
       h('iframe', {
         className: 'dsh-ima-embed-frame',

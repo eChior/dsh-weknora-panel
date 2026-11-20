@@ -191,6 +191,32 @@ var CSS = [
   '.dsh-ima-sel{height:26px;border-radius:6px;border:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.14));background:var(--dsw-alias-bg-layer-2,#fff);color:inherit;font-size:12px;padding:0 6px;max-width:200px}',
   '.dsh-ima-sel:focus{outline:none;border-color:var(--dsw-alias-border-brand,#3b82f6)}',
   '.dsh-ima-qa-hint{font-size:11px;opacity:.45;margin-left:auto}',
+  // 问答区（照 WeKnora 聊天页：消息流 + 底部 composer）
+  '.dsh-ima-chat{flex:1;display:flex;flex-direction:column;min-height:0;min-width:0;padding:10px 12px 12px}',
+  '.dsh-ima-chat-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex:none}',
+  '.dsh-ima-chat-hint{font-size:11px;opacity:.45;margin-left:auto}',
+  '.dsh-ima-msgs{flex:1;min-height:0;overflow:auto;padding:2px 2px 8px;display:flex;flex-direction:column;gap:12px}',
+  '.dsh-ima-msg{display:flex;flex-direction:column;gap:4px;max-width:100%}',
+  '.dsh-ima-msg-u{align-items:flex-end}',
+  '.dsh-ima-msg-u .dsh-ima-bubble{max-width:86%;background:var(--dsw-alias-bg-layer-2,#eef4ff);color:inherit;border-radius:12px 12px 4px 12px;padding:8px 12px;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word}',
+  '.dsh-ima-msg-a{align-items:stretch}',
+  '.dsh-ima-ans{font-size:13px;line-height:1.75}',
+  '.dsh-ima-msg-bar{display:flex;align-items:center;gap:10px;margin-top:2px}',
+  '.dsh-ima-typing{display:inline-flex;align-items:center;gap:6px;font-size:12px;opacity:.6}',
+  '.dsh-ima-typing:before{content:"";width:10px;height:10px;border-radius:50%;border:2px solid currentColor;border-top-color:transparent;animation:dsh-ima-spin .8s linear infinite}',
+  '@keyframes dsh-ima-spin{to{transform:rotate(360deg)}}',
+  '.dsh-ima-welcome{margin:auto;max-width:460px;text-align:center;padding:24px 12px}',
+  '.dsh-ima-welcome-t{font-size:16px;font-weight:600;margin-bottom:6px}',
+  '.dsh-ima-welcome-s{font-size:12.5px;opacity:.6;line-height:1.7;margin-bottom:16px}',
+  '.dsh-ima-sq{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:left}',
+  '.dsh-ima-sq-card{border:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.12));background:var(--dsw-alias-bg-layer-2,#fff);color:inherit;border-radius:8px;padding:8px 10px;font-size:12px;line-height:1.5;text-align:left;cursor:pointer;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}',
+  '.dsh-ima-sq-card:hover{border-color:var(--dsw-alias-border-brand,#3b82f6);background:var(--dsw-alias-bg-layer-3,#f7faff)}',
+  '.dsh-ima-composer{flex:none;display:flex;gap:8px;align-items:flex-end;padding-top:8px;border-top:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.08))}',
+  '.dsh-ima-ta{flex:1;min-height:44px;max-height:160px;resize:none;border-radius:8px;border:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.14));background:var(--dsw-alias-bg-layer-2,#fff);color:inherit;font-size:13px;line-height:1.6;padding:8px 10px;font-family:inherit}',
+  '.dsh-ima-ta:focus{outline:none;border-color:var(--dsw-alias-border-brand,#3b82f6)}',
+  '.dsh-ima-send{flex:none;height:32px;padding:0 14px;border-radius:8px;border:none;background:#3b82f6;color:#fff;font-size:13px;cursor:pointer}',
+  '.dsh-ima-send:disabled{opacity:.45;cursor:default}',
+  '.dsh-ima-stop{background:#ef4444}',
   '.dsh-ima-tab{border:0;background:none;font:inherit;font-size:.9em;color:var(--dsw-alias-label-secondary,#666);padding:7px 12px;cursor:pointer;border-radius:6px 6px 0 0}',
   '.dsh-ima-tab:hover{background:var(--dsw-alias-bg-secondary,rgba(0,0,0,.04))}',
   '.dsh-ima-tab-on{color:var(--dsw-alias-label-primary,#1a1a1a);font-weight:600;box-shadow:inset 0 -2px 0 var(--dsw-alias-interactive-bg-primary,#3b6cf6)}',
@@ -977,138 +1003,151 @@ function snippet(text, limit) {
 // 这里把它渲染成可点角标，点开就是那一段的逐字原文（和 WeKnora 网页端一致）。
 function QaPanel(props) {
   props = props || {}
-  var qs = React.useState(''); var q = qs[0], setQ = qs[1]
-  var as = React.useState(null); var ans = as[0], setAns = as[1]
+  var ms = React.useState([]); var msgs = ms[0], setMsgs = ms[1]
+  var ss = React.useState(''); var sid = ss[0], setSid = ss[1]
   var bs = React.useState(false); var busy = bs[0], setBusy = bs[1]
   var es = React.useState(''); var err = es[0], setErr = es[1]
-  var cs = React.useState(null); var cite = cs[0], setCite = cs[1]
-  var os = React.useState(false); var officeOn = os[0], setOfficeOn = os[1]
+  var qs = React.useState(''); var q = qs[0], setQ = qs[1]
+  var sqs = React.useState([]); var sq = sqs[0], setSq = sqs[1]
   var boxRef = React.useRef(null)
+  var ctrlRef = React.useRef(null)
 
+  var agentList = (props.agents && props.agents.length)
+    ? props.agents
+    : [{ id: 'builtin-quick-answer', name: '快速问答', builtin: true }]
+
+  // 有新内容就滚到底（对应 WeKnora 的 scrollToBottom）
   React.useEffect(function () {
-    var el = boxRef.current && boxRef.current.querySelector('.dsh-ima-hl')
-    if (el && el.scrollIntoView) {
-      try { el.scrollIntoView({ block: 'center' }) } catch (e) { /* 老浏览器忽略 */ }
-    }
-  }, [cite && cite.chunkId, cite && cite.chunks && cite.chunks.length, officeOn])
+    var el = boxRef.current
+    if (!el) return
+    var near = el.scrollHeight - el.scrollTop - el.clientHeight < 160
+    if (near || msgs.length <= 2) el.scrollTop = el.scrollHeight
+  }, [msgs.length, msgs.length ? String(msgs[msgs.length - 1].content || '').length : 0])
 
-  // 流式问答：宿主把 WeKnora 的 SSE 原样转过来，这里逐帧把 answer 拼起来渲染，
-  // 用户能看到字一个一个出来，而不是干等 20 秒。
-  var doAsk = function () {
-    var text = String(q || '').trim()
-    if (!text || busy) return null
-    setBusy(true); setErr(''); setAns(null); setCite(null)
+  var loadSuggested = function () {
+    return api('/suggested?agentId=' + encodeURIComponent(props.agentId || 'builtin-quick-answer')
+      + (props.kbId ? '&kbId=' + encodeURIComponent(props.kbId) : ''))
+      .then(function (r) { setSq((r && r.ok && r.questions) || []) })
+      .catch(function () { setSq([]) })
+  }
+
+  React.useEffect(function () { loadSuggested() }, [props.agentId, props.kbId])
+
+  var openCite = function (cite) {
+    if (!cite || !cite.chunkId) return
+    if (__wkCtx && typeof openCiteInSidebar === 'function'
+      && openCiteInSidebar(__wkCtx, { chunkId: cite.chunkId, doc: cite.doc || '' })) return
+    toast('没能打开右侧栏；可以在「文件」里手动找这篇文档')
+  }
+
+  var newChat = function () {
+    if (ctrlRef.current) { try { ctrlRef.current.abort() } catch (e) { /* 忽略 */ } }
+    setMsgs([]); setSid(''); setErr(''); setBusy(false); setQ('')
+    loadSuggested()
+  }
+
+  var send = function (text) {
+    var query = String(text === undefined ? q : text).trim()
+    if (!query || busy) return
     var startedAt = Date.now()
+    setQ(''); setErr('')
+    setMsgs(function (prev) {
+      return prev.concat([
+        { id: 'u' + startedAt, role: 'user', content: query },
+        { id: 'a' + startedAt, role: 'assistant', content: '', streaming: true, elapsedMs: 0 },
+      ])
+    })
+    setBusy(true)
+
     var acc = ''
-    var refs = []
-    setAns({ answer: '', streaming: true, elapsedMs: 0, references: [] })
-    var flush = function () {
-      setAns({
-        answer: acc,
-        streaming: true,
-        elapsedMs: Date.now() - startedAt,
-        references: refs,
+    var tick = null
+    var patch = function (extra) {
+      setMsgs(function (prev) {
+        var out = prev.slice()
+        var last = out[out.length - 1]
+        if (!last || last.role !== 'assistant') return prev
+        out[out.length - 1] = Object.assign({}, last, { content: acc, elapsedMs: Date.now() - startedAt }, extra || {})
+        return out
       })
     }
-    var url = API + '/ask-stream?q=' + encodeURIComponent(text)
+    var url = API + '/ask-stream?q=' + encodeURIComponent(query)
       + (props.kbId ? '&kbId=' + encodeURIComponent(props.kbId) : '')
       + (props.agentId ? '&agentId=' + encodeURIComponent(props.agentId) : '')
+      + (sid ? '&sessionId=' + encodeURIComponent(sid) : '')
     var ctrl = (typeof AbortController === 'function') ? new AbortController() : null
+    ctrlRef.current = ctrl
+
     return fetch(url, { signal: ctrl ? ctrl.signal : undefined })
       .then(function (res) {
         if (!res.ok || !res.body) throw new Error('HTTP ' + res.status)
+        var next = res.headers.get('x-weknora-session')
+        if (next) setSid(next)
         var reader = res.body.getReader()
         var dec = new TextDecoder()
         var buf = ''
-        var timer = null
-        var patch = function () {
-          if (timer) return
-          timer = window.setTimeout(function () { timer = null; flush() }, 60)
-        }
         var pump = function () {
           return reader.read().then(function (r) {
-            if (r.done) {
-              if (timer) { window.clearTimeout(timer); timer = null }
-              setAns({
-                answer: acc || '（服务端没有返回答案文本）',
-                streaming: false,
-                elapsedMs: Date.now() - startedAt,
-                references: refs,
-              })
-              return
-            }
+            if (r.done) return null
             buf += dec.decode(r.value, { stream: true })
-            var i
-            while ((i = buf.indexOf('\n\n')) >= 0) {
-              var frame = buf.slice(0, i)
-              buf = buf.slice(i + 2)
-              var payload = frame.split('\n')
-                .filter(function (l) { return l.indexOf('data:') === 0 })
-                .map(function (l) { return l.slice(5).trim() })
-                .join('')
-              if (!payload) continue
-              var ev = null
-              try { ev = JSON.parse(payload) } catch (e) { continue }
-              var t = ev.response_type || ''
-              if (t === 'answer') { acc += ev.content || ''; patch() }
-              else if (t === 'references') { refs = ev.knowledge_references || []; patch() }
-              else if (t === 'thinking' && ev.content && !acc) { acc += ev.content; patch() }
-              else if (t === 'error') { throw new Error(ev.content || '问答返回错误') }
+            var cut = buf.indexOf('\n\n')
+            while (cut >= 0) {
+              var frame = buf.slice(0, cut)
+              buf = buf.slice(cut + 2)
+              cut = buf.indexOf('\n\n')
+              var lines = frame.split('\n')
+              for (var i = 0; i < lines.length; i++) {
+                var line = lines[i]
+                if (line.indexOf('data:') !== 0) continue
+                var raw = line.slice(5).trim()
+                if (!raw) continue
+                var ev = null
+                try { ev = JSON.parse(raw) } catch (e) { ev = null }
+                if (!ev) continue
+                if (ev.response_type === 'answer' && ev.content) {
+                  acc += ev.content
+                  if (!tick) {
+                    tick = setTimeout(function () { tick = null; patch({ streaming: true }) }, 60)
+                  }
+                } else if (ev.response_type === 'error') {
+                  throw new Error(ev.content || 'WeKnora 返回错误')
+                }
+              }
             }
             return pump()
           })
         }
         return pump()
       })
-      .catch(function (e) { setErr(String((e && e.message) || e)) })
-      .then(function () { setBusy(false) })
-  }
-
-  var openCite = function (kv) {
-    var doc = (kv && kv.doc) || ''
-    var cid = (kv && kv.chunk_id) || ''
-    if (!cid) { setCite({ doc: doc, chunkId: '', loading: false, chunks: [], content: '（这条引用没有 chunk_id）' }); return null }
-    setCite({ doc: doc, chunkId: cid, loading: true, chunks: [], content: '' })
-    return api('/chunk?id=' + encodeURIComponent(cid))
-      .then(function (r) {
-        if (!r || !r.ok) {
-          setCite({ doc: doc, chunkId: cid, loading: false, chunks: [], content: '取不到原文：' + ((r && r.message) || '未知错误') })
-          return null
-        }
-        var kid = r.knowledge_id || ''
-        var kidkb = r.knowledge_base_id || ''
-        // 再拉整篇，把命中段落标黄
-        return api('/text?id=' + encodeURIComponent(kid) + (kidkb ? '&kbId=' + encodeURIComponent(kidkb) : ''))
-          .then(function (t) {
-            var chunks = (t && t.ok && (t.items || t.chunks)) || []
-            if (!Array.isArray(chunks)) chunks = []
-            if (!chunks.length) {
-              setCite({ doc: doc, chunkId: r.chunk_id, knowledgeId: kid, kbId: kidkb, loading: false, chunks: [], content: r.content || '（这一段是空的）' })
-              return
-            }
-            setCite({
-              doc: doc, chunkId: r.chunk_id, knowledgeId: kid, kbId: kidkb,
-              index: r.chunk_index, total: chunks.length, loading: false, chunks: chunks, content: '',
-            })
-          })
+      .then(function () {
+        if (tick) { clearTimeout(tick); tick = null }
+        patch({ streaming: false, elapsedMs: Date.now() - startedAt })
+        setBusy(false)
       })
       .catch(function (e) {
-        setCite({ doc: doc, chunkId: cid, loading: false, chunks: [], content: '取不到原文：' + String((e && e.message) || e) })
+        if (tick) { clearTimeout(tick); tick = null }
+        setBusy(false)
+        var aborted = e && (e.name === 'AbortError')
+        patch({ streaming: false, elapsedMs: Date.now() - startedAt })
+        if (aborted) { if (!acc) patch({ content: '（已停止）' }); return }
+        setErr(String((e && e.message) || e))
       })
   }
 
-  var quoteAnswer = function () {
-    if (!ans || !ans.answer) return
-    sendToConversation('【WeKnora 问答】\n' + ans.answer)
+  var stop = function () {
+    if (ctrlRef.current) { try { ctrlRef.current.abort() } catch (e) { /* 忽略 */ } }
   }
 
-  var agentList = (props.agents && props.agents.length)
-    ? props.agents
-    : [{ id: 'builtin-quick-answer', name: '快速问答', builtin: true }]
+  var onKey = function (e) {
+    if (e.key === 'Enter' && !e.shiftKey && !(e.nativeEvent && e.nativeEvent.isComposing)) {
+      e.preventDefault()
+      send()
+    }
+  }
 
-  return h('div', { className: 'dsh-ima-qa' },
-    h('div', { className: 'dsh-ima-qa-top' },
-      h('span', { className: 'dsh-ima-qa-lbl' }, '智能体'),
+  var empty = msgs.length === 0
+
+  return h('div', { className: 'dsh-ima-chat' },
+    h('div', { className: 'dsh-ima-chat-top' },
       h('select', {
         className: 'dsh-ima-sel',
         value: props.agentId || agentList[0].id,
@@ -1117,75 +1156,69 @@ function QaPanel(props) {
       }, agentList.map(function (a) {
         return h('option', { key: a.id, value: a.id }, a.name + (a.builtin ? '' : ' · 自定义'))
       })),
-      h('span', { className: 'dsh-ima-qa-hint' }, '答案由 WeKnora 直接生成，不经模型转述'),
+      h('span', { className: 'dsh-ima-chat-hint' },
+        sid ? '多轮对话（带上下文）' : '新对话'),
+      h('button', { className: 'dsh-ima-ibtn', title: '开一个新对话', onClick: newChat }, '＋'),
     ),
-    h('div', { className: 'dsh-ima-crumb' },
-      h('input', {
-        className: 'dsh-ima-input',
-        value: q,
-        placeholder: props.kbName ? '在「' + props.kbName + '」里提问…' : '在所有知识库里提问…',
-        onChange: function (e) { setQ(e.target.value) },
-        onKeyDown: function (e) { if (e.key === 'Enter' && !(e.nativeEvent && e.nativeEvent.isComposing)) doAsk() },
-      }),
-      h('button', { className: 'dsh-ima-btn dsh-ima-btn-p', onClick: doAsk, disabled: busy || !String(q).trim() },
-        busy ? '思考中…' : '提问'),
-    ),
-    err ? h('div', { className: 'dsh-ima-err' }, err) : null,
-    h('div', { className: 'dsh-ima-qa-body' },
-      ans
-        ? h('div', null,
-          h('div', { className: 'dsh-ima-pre dsh-ima-ans' }, renderMarkdown(ans.answer || '', { onCite: openCite })),
-          h('div', { className: 'dsh-ima-stamp', style: { marginTop: '10px', display: 'flex', gap: '10px', alignItems: 'center' } },
-            h('span', null, ans.streaming
-              ? '生成中… ' + ((ans.elapsedMs || 0) / 1000).toFixed(1) + ' 秒'
-              : (ans.elapsedMs ? (ans.elapsedMs / 1000).toFixed(1) + ' 秒 · ' : '') + 'WeKnora 服务端直答'),
-            h('button', { className: 'dsh-ima-actbtn', onClick: quoteAnswer }, h(QuoteGlyph), '引用到对话'),
-          ))
-        : h('div', { className: 'dsh-ima-empty' },
-          busy ? 'WeKnora 正在检索并生成答案…' : '问一个关于这些文档的问题；答案里的蓝色角标点开就是那段原文。'),
-    ),
-    cite ? h('div', {
-      className: 'dsh-ima-citebox',
-      onClick: function (e) { if (e.target === e.currentTarget) setCite(null) },
-    },
-      h('div', { className: 'dsh-ima-citecard' },
-        h('div', { className: 'dsh-ima-cite-h' },
-          h('span', { className: 'dsh-ima-cite-doc', title: cite.doc }, cite.doc || '出处原文'),
-          cite.total ? h('span', { className: 'dsh-ima-cite-n' }, '命中第 ' + ((cite.index || 0) + 1) + ' / ' + cite.total + ' 段') : null,
-          h('span', { style: { flex: 1 } }),
-          cite.knowledgeId ? h('button', {
-            className: 'dsh-ima-actbtn' + (officeOn ? ' dsh-ima-actbtn-on' : ''),
-            title: officeOn ? '回到解析文本' : '用 DSH 的 Office 套件看原件',
-            onClick: function () { setOfficeOn(!officeOn) },
-          }, officeOn ? '看文本' : 'Office 原件') : null,
-          cite.knowledgeId ? h('button', {
-            className: 'dsh-ima-actbtn',
-            title: '在文件列表里打开这篇',
-            onClick: function () { if (props.onOpenDoc) props.onOpenDoc(cite.knowledgeId, cite.doc) },
-          }, '文件页') : null,
-          h('button', { className: 'dsh-ima-ibtn', onClick: function () { setCite(null) }, title: '关闭' }, '✕'),
-        ),
-        officeOn && cite.knowledgeId
-          ? h('div', { className: 'dsh-ima-office' },
-            h('iframe', {
-              className: 'dsh-ima-office-frame',
-              src: API + '/pdf?id=' + encodeURIComponent(cite.knowledgeId),
-              title: cite.doc || 'office',
+    h('div', { className: 'dsh-ima-msgs', ref: boxRef },
+      empty
+        ? h('div', { className: 'dsh-ima-welcome' },
+          h('div', { className: 'dsh-ima-welcome-t' }, '有什么可以帮你？'),
+          h('div', { className: 'dsh-ima-welcome-s' },
+            (props.kbName ? '在「' + props.kbName + '」里提问。' : '在所有知识库里提问。')
+            + '答案由 WeKnora 直接生成，句末的角标点开就是出处原文。'),
+          sq.length
+            ? h('div', { className: 'dsh-ima-sq' }, sq.slice(0, 6).map(function (it, i) {
+              return h('button', {
+                key: 'sq' + i,
+                className: 'dsh-ima-sq-card',
+                title: it.question,
+                onClick: function () { send(it.question) },
+              }, it.question)
             }))
-          : h('div', { className: 'dsh-ima-cite-b', ref: boxRef },
-            cite.loading
-              ? '读取原文…'
-              : (cite.chunks && cite.chunks.length)
-                ? cite.chunks.map(function (c, i) {
-                  var hit = !!cite.chunkId && c.id === cite.chunkId
-                  return h('div', {
-                    className: 'dsh-ima-chunk' + (hit ? ' dsh-ima-hl' : ''),
-                    key: c.id || ('c' + i),
-                  }, c.content || '')
-                })
-                : h('div', { className: 'dsh-ima-pre' }, renderMarkdown(cite.content || '')),
-          ),
-      )) : null,
+            : null,
+        )
+        : msgs.map(function (m) {
+          if (m.role === 'user') {
+            return h('div', { key: m.id, className: 'dsh-ima-msg dsh-ima-msg-u' },
+              h('div', { className: 'dsh-ima-bubble' }, m.content))
+          }
+          return h('div', { key: m.id, className: 'dsh-ima-msg dsh-ima-msg-a' },
+            h('div', { className: 'dsh-ima-ans' },
+              m.content
+                ? renderMarkdown(m.content, { onCite: openCite })
+                : h('span', { className: 'dsh-ima-typing' }, '正在检索知识库…')),
+            m.streaming
+              ? null
+              : h('div', { className: 'dsh-ima-msg-bar' },
+                h('span', { className: 'dsh-ima-stamp' },
+                  ((m.elapsedMs || 0) / 1000).toFixed(1) + ' 秒 · WeKnora 服务端直答'),
+                h('button', {
+                  className: 'dsh-ima-actbtn',
+                  onClick: function () { sendToConversation('【WeKnora 问答】\n' + m.content) },
+                }, h(QuoteGlyph), '引用到对话'),
+              ),
+          )
+        }),
+      err ? h('div', { className: 'dsh-ima-err' }, err) : null,
+    ),
+    h('div', { className: 'dsh-ima-composer' },
+      h('textarea', {
+        className: 'dsh-ima-ta',
+        rows: 2,
+        value: q,
+        placeholder: empty ? '问点什么…（Enter 发送，Shift+Enter 换行）' : '继续追问…',
+        onChange: function (e) { setQ(e.target.value) },
+        onKeyDown: onKey,
+      }),
+      busy
+        ? h('button', { className: 'dsh-ima-send dsh-ima-stop', onClick: stop }, '停止')
+        : h('button', {
+          className: 'dsh-ima-send',
+          onClick: function () { send() },
+          disabled: !String(q).trim(),
+        }, '发送'),
+    ),
   )
 }
 

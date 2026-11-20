@@ -39,8 +39,8 @@ var CSS = [
   '.dsh-ima-btn-p:disabled{background:var(--dsw-alias-interactive-bg-primary,#3b6cf6);color:#fff}',
   '.dsh-ima-ibtn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;border:none;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary,#666);cursor:pointer;flex-shrink:0}',
   '.dsh-ima-ibtn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(0,0,0,.05))}',
-  '.dsh-ima-body{flex:1;display:flex;min-height:0}',
-  '.dsh-ima-kbs{width:230px;border-right:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.08));overflow:auto;padding:10px;flex-shrink:0}',
+  '.dsh-ima-body{flex:1;display:flex;min-height:0;min-width:0;overflow:hidden}',
+  '.dsh-ima-kbs{width:200px;border-right:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.08));overflow:auto;padding:10px;flex-shrink:0}',
   '.dsh-ima-kb{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;cursor:pointer;margin-bottom:2px}',
   '.dsh-ima-kb:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(0,0,0,.05))}',
   '.dsh-ima-kb-on{background:var(--dsw-alias-interactive-bg-hover,rgba(0,0,0,.05))}',
@@ -83,7 +83,9 @@ var CSS = [
   '.dsh-ima-item-t{flex:1;font-size:1em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}',
   '.dsh-ima-item-y{font-size:.85em;color:var(--dsw-alias-label-tertiary,#999);flex-shrink:0}',
   // 行内操作：图标+文字，常驻显示（之前只显示图标且要悬停才出现，太不显眼）
-  '.dsh-ima-act{display:flex;gap:6px;flex-shrink:0;margin-left:6px}',
+  '.dsh-ima-act{display:flex;gap:4px;flex-shrink:0;margin-left:4px;opacity:.35;transition:opacity .15s}',
+  '.dsh-ima-item:hover .dsh-ima-act{opacity:1}',
+  '.dsh-ima-actbtn{padding:2px 6px;font-size:11px}',
   '.dsh-ima-actbtn{display:inline-flex;align-items:center;gap:5px;font-size:.86em;padding:4px 10px;border-radius:6px;border:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.14));background:transparent;color:var(--dsw-alias-label-secondary,#666);cursor:pointer;font-family:inherit;line-height:1.45;white-space:nowrap}',
   '.dsh-ima-actbtn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(0,0,0,.05));color:var(--dsw-alias-label-primary,#1a1a1a)}',
   '.dsh-ima-actbtn-p{color:var(--dsw-alias-interactive-bg-primary,#3b6cf6);border-color:var(--dsw-alias-interactive-bg-primary,#3b6cf6);font-weight:500}',
@@ -180,6 +182,15 @@ var CSS = [
   '.dsh-ima-citetab .dsh-ima-hl{background:#fff3bf;box-shadow:0 0 0 5px #fff3bf;border-radius:3px}',
   // ── 问答页 ──
   '.dsh-ima-tabs{display:flex;gap:2px;padding:0 10px;border-bottom:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.1))}',
+  '.dsh-ima-split{display:flex;flex:1;min-height:0;gap:0}',
+  '.dsh-ima-qa-pane{width:50%;min-width:300px;display:flex;min-height:0;overflow:hidden;border-right:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.1))}',
+  '.dsh-ima-kb-pane{flex:1;min-width:0;display:flex;min-height:0;overflow:hidden}',
+  '.dsh-ima-qa{padding:10px 12px;display:flex;flex-direction:column;min-height:0;flex:1;width:100%}',
+  '.dsh-ima-qa-top{display:flex;align-items:center;gap:6px;margin-bottom:8px}',
+  '.dsh-ima-qa-lbl{font-size:11.5px;opacity:.65;flex:none}',
+  '.dsh-ima-sel{height:26px;border-radius:6px;border:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.14));background:var(--dsw-alias-bg-layer-2,#fff);color:inherit;font-size:12px;padding:0 6px;max-width:200px}',
+  '.dsh-ima-sel:focus{outline:none;border-color:var(--dsw-alias-border-brand,#3b82f6)}',
+  '.dsh-ima-qa-hint{font-size:11px;opacity:.45;margin-left:auto}',
   '.dsh-ima-tab{border:0;background:none;font:inherit;font-size:.9em;color:var(--dsw-alias-label-secondary,#666);padding:7px 12px;cursor:pointer;border-radius:6px 6px 0 0}',
   '.dsh-ima-tab:hover{background:var(--dsw-alias-bg-secondary,rgba(0,0,0,.04))}',
   '.dsh-ima-tab-on{color:var(--dsw-alias-label-primary,#1a1a1a);font-weight:600;box-shadow:inset 0 -2px 0 var(--dsw-alias-interactive-bg-primary,#3b6cf6)}',
@@ -1001,6 +1012,7 @@ function QaPanel(props) {
     }
     var url = API + '/ask-stream?q=' + encodeURIComponent(text)
       + (props.kbId ? '&kbId=' + encodeURIComponent(props.kbId) : '')
+      + (props.agentId ? '&agentId=' + encodeURIComponent(props.agentId) : '')
     var ctrl = (typeof AbortController === 'function') ? new AbortController() : null
     return fetch(url, { signal: ctrl ? ctrl.signal : undefined })
       .then(function (res) {
@@ -1090,7 +1102,23 @@ function QaPanel(props) {
     sendToConversation('【WeKnora 问答】\n' + ans.answer)
   }
 
+  var agentList = (props.agents && props.agents.length)
+    ? props.agents
+    : [{ id: 'builtin-quick-answer', name: '快速问答', builtin: true }]
+
   return h('div', { className: 'dsh-ima-qa' },
+    h('div', { className: 'dsh-ima-qa-top' },
+      h('span', { className: 'dsh-ima-qa-lbl' }, '智能体'),
+      h('select', {
+        className: 'dsh-ima-sel',
+        value: props.agentId || agentList[0].id,
+        title: '换一个 WeKnora 智能体回答',
+        onChange: function (e) { if (props.onAgent) props.onAgent(e.target.value) },
+      }, agentList.map(function (a) {
+        return h('option', { key: a.id, value: a.id }, a.name + (a.builtin ? '' : ' · 自定义'))
+      })),
+      h('span', { className: 'dsh-ima-qa-hint' }, '答案由 WeKnora 直接生成，不经模型转述'),
+    ),
     h('div', { className: 'dsh-ima-crumb' },
       h('input', {
         className: 'dsh-ima-input',
@@ -1183,6 +1211,8 @@ function WeKnoraPage(props) {
   var fds = React.useState([]); var folders = fds[0], setFolders = fds[1]
   var cfd = React.useState('__all__'); var curFolder = cfd[0], setCurFolder = cfd[1]
   var ups = React.useState([]); var uploads = ups[0], setUploads = ups[1]
+  var ags = React.useState([]); var agents = ags[0], setAgents = ags[1]
+  var aid = React.useState('builtin-quick-answer'); var agentId = aid[0], setAgentId = aid[1]
   var fileRef = React.useRef(null)
 
   var msg = function (e) { return String((e && e.message) || e) }
@@ -1198,9 +1228,25 @@ function WeKnoraPage(props) {
     setLoading(true); setError('')
     return api('/knowledgeBases').then(function (r) {
       if (!r || !r.ok) { setError((r && r.message) || '取不到知识库列表'); return }
-      setKbs(r.knowledgeBases || []); setUpdatedAt(new Date())
+      var list = (r && r.knowledgeBases) || []
+      setKbs(list); setUpdatedAt(new Date())
+      // 没选库就默认选第一个，右侧知识库区不至于空着
+      if (list.length && !curKb) {
+        setCurKb(list[0])
+        loadFolders(list[0])
+        loadFiles(list[0], keyword, '__all__')
+      }
     }).catch(function (e) { setError(msg(e)) })
       .then(function () { setLoading(false) })
+  }
+  var loadAgents = function () {
+    return api('/agents').then(function (r) {
+      if (r && r.ok && r.agents && r.agents.length) {
+        setAgents(r.agents)
+        var has = r.agents.some(function (a) { return a.id === agentId })
+        if (!has) setAgentId(r.defaultAgentId || r.agents[0].id)
+      }
+    }).catch(function () { /* 拿不到就用内置快速问答 */ })
   }
   var loadFolders = function (kb) {
     if (!kb) { setFolders([]); return Promise.resolve() }
@@ -1297,7 +1343,7 @@ function WeKnoraPage(props) {
     }, 1500)
   }
 
-  React.useEffect(function () { refreshStatus() }, [])
+  React.useEffect(function () { refreshStatus(); loadAgents() }, [])
   React.useEffect(function () {
     if (status && status.configured) loadKbs()
   }, [status && status.configured])
@@ -1348,7 +1394,6 @@ function WeKnoraPage(props) {
   var showCite = function (detail) {
     var cid = String((detail && detail.chunkId) || '')
     if (!cid) return null
-    setTab('files')
     setError(''); setHits([]); setDetail(null); setLoading(true)
     return api('/chunk?id=' + encodeURIComponent(cid)).then(function (r) {
       if (!r || !r.ok) { setError((r && r.message) || '取不到这段原文'); return null }
@@ -1517,16 +1562,21 @@ function WeKnoraPage(props) {
         )
       }),
     ) : null,
-    h('div', { className: 'dsh-ima-tabs' },
-      h('button', {
-        className: 'dsh-ima-tab' + (tab === 'files' ? ' dsh-ima-tab-on' : ''),
-        onClick: function () { setTab('files') },
-      }, '文件'),
-      h('button', {
-        className: 'dsh-ima-tab' + (tab === 'qa' ? ' dsh-ima-tab-on' : ''),
-        onClick: function () { setTab('qa') },
-      }, '问答'),
-    ),
+    // 左：问答（WeKnora 原生体验，可切智能体）　右：知识库（库/分组/文件/预览）
+    h('div', { className: 'dsh-ima-split' },
+      h('div', { className: 'dsh-ima-qa-pane' },
+        h(QaPanel, {
+          kbId: curKb && curKb.id,
+          kbName: curKb && curKb.name,
+          agentId: agentId,
+          agents: agents,
+          onAgent: function (v) { setAgentId(v) },
+          onOpenDoc: function (kid, title) {
+            openFile({ id: kid, title: title, file_name: title, file_type: '' })
+          },
+        }),
+      ),
+      h('div', { className: 'dsh-ima-kb-pane' },
     h('div', { className: 'dsh-ima-body' },
       // 左：知识库
       h('div', { className: 'dsh-ima-kbs' },
@@ -1569,17 +1619,8 @@ function WeKnoraPage(props) {
           )
           : null,
       ),
-      // 右：问答 / 检索 / 预览 / 文件列表
-      tab === 'qa'
-        ? h(QaPanel, {
-          kbId: curKb && curKb.id,
-          kbName: curKb && curKb.name,
-          onOpenDoc: function (kid, title) {
-            setTab('files')
-            openFile({ id: kid, title: title, file_name: title, file_type: '' })
-          },
-        })
-        : h('div', { className: 'dsh-ima-main' },
+      // 右：检索 / 预览 / 文件列表
+      h('div', { className: 'dsh-ima-main' },
         h('div', { className: 'dsh-ima-crumb' },
           h('input', {
             className: 'dsh-ima-input',
@@ -1708,6 +1749,8 @@ function WeKnoraPage(props) {
                     )
                   }),
                 ),
+      ),
+    ),
       ),
     ),
     showSetup ? h('div', {
@@ -2052,9 +2095,20 @@ function closeCiteTab() {
  * 打开右侧栏原文 tab。左侧会话栏完全不动 —— 之前会顺手收起左侧栏，
  * 导致用户正在看的会话被关掉、还留下一个空的「开始」页。
  */
+/**
+ * 最近一次角标点击的 { chunkId, doc }。
+ *
+ * 为什么要这个全局变量：`sidebarRight.openTab(kind, {params})` 传进去的 params
+ * 在 tab 正文里能不能取到，取决于 DSH 版本（0.2.2-rc.1 的 `tab.navigation` 是
+ * snapshot store，且 slot 组件的 props 里不保证有 useTabInfo）。点击和打开发生在
+ * 同一个前端上下文里，直接记一份最稳；params 仅作为刷新/恢复时的兜底。
+ */
+var PENDING_CITE = null
+
 function openCiteInSidebar(ctx, detail) {
   try {
     if (!ctx || !ctx.sidebarRight || typeof ctx.sidebarRight.openTab !== 'function') return false
+    PENDING_CITE = { chunkId: String(detail.chunkId || ''), doc: String(detail.doc || ''), at: Date.now() }
     if (typeof ctx.sidebarRight.isExpanded === 'function' && !ctx.sidebarRight.isExpanded()) {
       ctx.sidebarRight.toggleExpanded()
     }
@@ -2067,11 +2121,13 @@ function openCiteInSidebar(ctx, detail) {
 }
 
 function citeTabParams(props) {
+  // 1) 刚刚点过角标：直接用内存里那份（最可靠，绕开 DSH 各版本 params 传递差异）
+  if (PENDING_CITE && PENDING_CITE.chunkId) return PENDING_CITE
+  // 2) 兜底：从 tab 的 navigation snapshot 里取（刷新后恢复 tab 时用得到）
   try {
-    var info = props.useTabInfo ? props.useTabInfo() : null
+    var info = props && props.useTabInfo ? props.useTabInfo() : null
     var tab = info && info.tab
     var nav = tab && tab.navigation
-    // DSH 的 tab.navigation 是 snapshot store（有 getSnapshot），不是快照值本身
     var snap = nav && typeof nav.getSnapshot === 'function' ? nav.getSnapshot() : nav
     return (snap && snap.params) || (tab && tab.params) || {}
   } catch (e) { return {} }

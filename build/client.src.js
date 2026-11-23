@@ -2210,15 +2210,22 @@ function _doDecorate() {
   return total
 }
 
+// 只认短码 [#ab12cd34]。裸 [1] 一律不装饰：
+// 正文示例、代码里的 m[1]、思考过程里的编号都会被误伤，
+// 之前把推理区里的 m[1] 染成蓝角标就是这么来的。
+var MARK_RE = /[\[【]#([0-9a-z]{6,12})[\]】]/g
+var CITE_SHORT = Object.create(null)
+
 function decorateOneRoot(root, map) {
+  var localSeq = { __n: 0 }
   var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null)
   var nodes = []
   var node
   while ((node = walker.nextNode())) {
     var txt = node.nodeValue
     if (!txt || (txt.indexOf('[') < 0 && txt.indexOf('【') < 0)) continue
-    // 模型常把 [1] 写成全角【1】，两种都要认
-    if (!/[\[【]\d{1,2}[\]】]/.test(txt)) continue
+    // 新格式 [#ab12cd34]（短码，全局唯一）；旧格式 [1] / 【1】（历史消息）
+    if (!MARK_RE.test(txt)) continue
     if (decorateSkip(node)) continue
     nodes.push(node)
   }
@@ -2226,25 +2233,35 @@ function decorateOneRoot(root, map) {
   for (var j = 0; j < nodes.length; j++) {
     var src = nodes[j]
     var text = src.nodeValue
-    var re = /[\[【](\d{1,2})[\]】]/g
+    var re = MARK_RE
+    re.lastIndex = 0
     var frag = document.createDocumentFragment()
     var last = 0
     var m
     var changed = false
     while ((m = re.exec(text))) {
-      var hit = map[Number(m[1])]
-      if (!hit) continue
-      if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)))
-      var a = document.createElement('a')
-      a.className = 'dsh-ima-cite dsh-ima-cite-dom'
-      a.setAttribute('href', 'dsh-weknora:chunk/' + encodeURIComponent(hit.chunkId) + (hit.doc ? '?doc=' + encodeURIComponent(hit.doc) : ''))
-      a.setAttribute('title', (hit.doc ? hit.doc + ' · ' : '') + '第 ' + m[1] + ' 处出处')
-      a.setAttribute('data-wk-cite', '1')
-      a.textContent = m[1]
-      frag.appendChild(a)
-      last = m.index + m[0].length
-      changed = true
-      done++
+      var short = m[1] || ''
+      var a
+      if (short) {
+        // 短码：不需要编号表，短码本身就指向唯一 chunk。
+        // 显示编号按「本条消息内第几次出现」算，所以每条回答都从 1 开始。
+        var seq = localSeq[short]
+        if (!seq) { seq = (++localSeq.__n); localSeq[short] = seq }
+        var info = (CITE_SHORT && CITE_SHORT[short]) || null
+        var doc = info ? info.doc : ''
+        if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)))
+        a = document.createElement('a')
+        a.className = 'dsh-ima-cite dsh-ima-cite-dom'
+        a.setAttribute('href', 'dsh-weknora:c/' + short)
+        a.setAttribute('title', (doc ? doc + ' · ' : '') + '第 ' + seq + ' 处出处')
+        a.setAttribute('data-wk-cite', short)
+        a.textContent = String(seq)
+        frag.appendChild(a)
+        last = m.index + m[0].length
+        changed = true
+        done++
+        continue
+      }
     }
     if (!changed || !src.parentNode) continue
     if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)))

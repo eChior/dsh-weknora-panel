@@ -583,8 +583,8 @@ function CiteTabBodyInner(props) {
   React.useEffect(function () {
     if (s.loading) return
     var box = document.querySelector('.dsh-wk-citetab .dsh-wk-hl')
-    if (box && box.scrollIntoView) {
-      try { box.scrollIntoView({ block: 'center' }) } catch (e) { /* 忽略 */ }
+    if (box) {
+      try { scrollIntoBox(box, 'center') } catch (e) { /* 忽略 */ }
     }
   }, [s.loading, s.focusId])
 

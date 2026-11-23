@@ -127,3 +127,28 @@ function fixResourceUrls(text, kbId) {
     return API + '/resource?kbId=' + encodeURIComponent(kbId || '') + '&filePath=' + encodeURIComponent(m)
   })
 }
+
+// scrollIntoView 会滚动「所有」可滚祖先，包括整页 —— 在 DSH 里点一次角标
+// 就会把 document 往下滚一截（表现为「界面整体上移」，点得越多越明显）。
+// 这里只滚离目标最近的那个溢出容器，绝不触碰祖先页面。
+function scrollParentOf(el) {
+  var p = el && el.parentElement
+  while (p && p.nodeType === 1) {
+    var ov = ''
+    try { ov = window.getComputedStyle(p).overflowY } catch (e) { ov = '' }
+    if ((ov === 'auto' || ov === 'scroll') && p.scrollHeight > p.clientHeight + 1) return p
+    p = p.parentElement
+  }
+  return null
+}
+
+function scrollIntoBox(el, block) {
+  if (!el) return
+  var box = scrollParentOf(el)
+  if (!box) return
+  var r = el.getBoundingClientRect()
+  var br = box.getBoundingClientRect()
+  var offset = block === 'center' ? (box.clientHeight - r.height) / 2 : 8
+  var next = box.scrollTop + (r.top - br.top) - offset
+  box.scrollTop = Math.max(0, next)
+}

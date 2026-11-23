@@ -171,8 +171,8 @@ function usePanelState() {
   React.useEffect(function () {
     if (!preview || !preview.focusId) return
     var el = document.querySelector('.dsh-wk-main .dsh-wk-hl')
-    if (el && el.scrollIntoView) {
-      try { el.scrollIntoView({ block: 'center' }) } catch (e2) { /* 老浏览器忽略 */ }
+    if (el) {
+      try { scrollIntoBox(el, 'center') } catch (e2) { /* 忽略 */ }
     }
   }, [preview && preview.focusId])
 

@@ -195,7 +195,7 @@ function PdfView(props) {
       wrapsRef.current = wraps
       var target = Math.min(Math.max(1, targetRef.current || 1), s.num)
       if (target > 1 && wraps[target - 1]) {
-        try { wraps[target - 1].scrollIntoView({ block: 'start' }) } catch (e) { /* 忽略 */ }
+        try { scrollIntoBox(wraps[target - 1], 'start') } catch (e) { /* 忽略 */ }
       }
       if (typeof IntersectionObserver === 'function') {
         var ob = new IntersectionObserver(function (entries) {

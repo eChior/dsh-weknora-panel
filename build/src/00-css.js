@@ -173,7 +173,12 @@ var CSS = [
   '.dsh-ima-tl span{color:transparent;position:absolute;white-space:pre;transform-origin:0% 0%}',
   '.dsh-ima-tl > :not(.markedContent),.dsh-ima-tl .markedContent span:not(.markedContent){z-index:1;--font-height:0;font-size:calc(var(--text-scale-factor) * var(--font-height));--scale-x:1;--rotate:0deg;transform:rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv))}',
   '.dsh-ima-tl .markedContent{display:contents}',
-  '.dsh-ima-citetab-b.dsh-ima-nos,.dsh-ima-nos{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:0}',
+    '.dsh-ima-ovl{position:fixed;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,.35)}',
+  '.dsh-ima-ovl-card{display:flex;flex-direction:column;width:min(1100px,92vw);height:min(88vh,900px);background:#fff;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.24);overflow:hidden}',
+  '.dsh-ima-ovl-h{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid rgba(0,0,0,.08);flex-shrink:0}',
+  '.dsh-ima-ovl-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:13px}',
+  '.dsh-ima-ovl-b{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}',
+'.dsh-ima-citetab-b.dsh-ima-nos,.dsh-ima-nos{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:0}',
   '.dsh-ima-x{width:20px;height:20px;padding:0;border:none;border-radius:4px;background:transparent;color:#888;font-size:12px;line-height:20px;cursor:pointer;flex-shrink:0}',
   '.dsh-ima-x:hover{background:rgba(0,0,0,.08);color:#333}',
   // ── 右侧边栏「知识库原文」tab ──

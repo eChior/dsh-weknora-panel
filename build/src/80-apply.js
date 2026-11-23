@@ -21,7 +21,7 @@ function apply(ctx) {
   injectCss()
   console.log('[dsh-weknora] 浏览器半初始化，预览引擎:', window.__DSH_WK_VIEWER__ ? '已加载' : '缺失')
 
-  registerCiteTab(ctx)
+  registerCiteOverlay(ctx)
   bindCiteLinks(ctx)
   observeCiteMarks()
   // 工具卡片不再接管（registerLiveView）：DSH 默认渲染在 result 阶段认的是
@@ -66,6 +66,7 @@ exports.__dev = {
   bindCiteLinks: bindCiteLinks,
   decorateCiteMarks: decorateCiteMarks,
   citeTabParams: citeTabParams, openCiteDetail: openCiteDetail,
+  CiteOverlay: CiteOverlay, openCiteOverlay: openCiteOverlay,
   CiteTabBody: CiteTabBody, openCiteInSidebar: openCiteInSidebar,
   css: CSS,
 }

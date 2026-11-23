@@ -2900,9 +2900,25 @@ function LiveAnswer(props) {
   }, [s.text])
 
   var secs = Math.max(0, Math.round((Date.now() - s.started) / 1000))
+  // 兜底：如果实时流没接上（比如宿主没把 /live 转发过来），就直接渲染工具结果里的正文，
+  // 保证「直出」模式下答案一定看得见。
+  var fallbackText = ''
+  try {
+    var blk = props && (props.block || props)
+    var ct = blk && blk.content
+    if (typeof ct === 'string') fallbackText = ct
+    else if (Array.isArray(ct)) {
+      fallbackText = ct.map(function (x) {
+        return typeof x === 'string' ? x : ((x && (x.text || x.content)) || '')
+      }).join('')
+    } else if (ct && typeof ct.text === 'string') fallbackText = ct.text
+  } catch (e) { fallbackText = '' }
+
   var body
   if (!s.text) {
-    body = h('div', { className: 'dsh-ima-live-wait' }, s.done ? '（这次没有拿到内容）' : '正在检索并生成…')
+    body = fallbackText
+      ? renderMarkdown(fallbackText, { onCite: function (kv) { openCiteDetailFromEvent(kv) } })
+      : h('div', { className: 'dsh-ima-live-wait' }, s.done ? '（这次没有拿到内容）' : '正在检索并生成…')
   } else {
     body = renderMarkdown(s.text, { onCite: function (kv) { openCiteDetailFromEvent(kv) } })
   }

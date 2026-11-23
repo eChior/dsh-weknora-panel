@@ -516,26 +516,6 @@ function CiteTabTitle(props) {
 var __pdfjs = null
 
 function CiteTabBody(props) {
-  // 右栏没有可依赖的高度来源：外层 tabBody 是 auto 高度，内容多高它就多高，
-  // 于是任何固定的 min-height 只要超过「视口 - 顶栏 - 底部面板」就会把整页顶高
-  // （用户看到的"界面整体上移"）。所以挂载后自己量一次溢出量，把容器高度
-  // 收到刚好不溢出为止 —— 这是唯一不依赖 DSH 内部布局常量的做法。
-  React.useEffect(function () {
-    var tries = 0
-    function fit() {
-      var el = document.querySelector('.dsh-wk-citetab')
-      if (!el) return
-      var over = document.documentElement.scrollHeight - window.innerHeight
-      if (over > 0 && el.offsetHeight > 180 && tries < 8) {
-        el.style.minHeight = '0px'
-        el.style.height = Math.max(160, el.offsetHeight - over) + 'px'
-        tries++
-        requestAnimationFrame(fit)
-      }
-    }
-    var t = setTimeout(fit, 400)
-    return function () { clearTimeout(t) }
-  }, [])
   // 包一层 try/catch：这个组件在 DSH 的右侧栏里独立渲染，一旦抛错整块就是白屏，
   // 用户看不到任何线索。这里把异常降级成一段可见的错误文字。
   try {

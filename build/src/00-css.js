@@ -188,7 +188,7 @@ var CSS = [
   '.dsh-wk-x{width:20px;height:20px;padding:0;border:none;border-radius:4px;background:transparent;color:#888;font-size:12px;line-height:20px;cursor:pointer;flex-shrink:0}',
   '.dsh-wk-x:hover{background:rgba(0,0,0,.08);color:#333}',
   // ── 右侧边栏「知识库原文」tab ──
-  '.dsh-wk-citetab{display:flex;flex-direction:column;height:100%;max-height:100%;min-height:420px;min-width:0;overflow:hidden;box-sizing:border-box;font-size:13px;line-height:1.75;color:var(--dsw-alias-label-primary,#1a1a1a);background:var(--dsw-alias-bg-primary,#fff)}',
+  '.dsh-wk-citetab{display:flex;flex-direction:column;height:100%;max-height:100%;min-height:40vh;min-width:0;overflow:hidden;box-sizing:border-box;font-size:13px;line-height:1.75;color:var(--dsw-alias-label-primary,#1a1a1a);background:var(--dsw-alias-bg-primary,#fff)}',
   // 右侧栏 tab 的容器在 DSH 里可能是 auto 高度，height:100% 会塌成 0 → 预览一片白。
   '.dsh-wk-citetab-b>div{min-height:0}',
   '.dsh-wk-citetab-h{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.08));flex-shrink:0}',

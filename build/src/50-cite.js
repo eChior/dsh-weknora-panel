@@ -545,8 +545,9 @@ function CiteTabBodyInner(props) {
   }, [])
   var st = React.useState({ loading: true, error: '', doc: doc, items: [], focusId: chunkId })
   var s = st[0], setS = st[1]
-  // 侧边栏默认就用 PDF 原件（LibreOffice 转出来的排版），需要复制文字时才切「看文本」
-  var ob = React.useState(true); var officeOn = ob[0], setOfficeOn = ob[1]
+  // 默认走「文本」：分块拼接 + 命中段标黄，纯 DOM 渲染，不依赖 pdfjs/canvas，
+  // 因此不可能白屏。要看排版时点「原件」再切 PDF。
+  var ob = React.useState(false); var officeOn = ob[0], setOfficeOn = ob[1]
   // 命中段在 PDF 的第几页 —— 拿到后给 iframe 加 #page=N，直接翻过去
   var pg = React.useState(0); var page = pg[0], setPage = pg[1]
   var rd = React.useState(false); var pageReady = rd[0], setPageReady = rd[1]

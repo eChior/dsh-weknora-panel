@@ -539,6 +539,12 @@ function citeChainDump() {
 }
 
 function CiteTabBody(props) {
+  // 挂载后量两次父链高度（700ms / 2500ms），看哪一层是 auto 高度、PDF 画完后溢出多少
+  React.useEffect(function () {
+    var t1 = setTimeout(citeChainDump, 700)
+    var t2 = setTimeout(citeChainDump, 2500)
+    return function () { clearTimeout(t1); clearTimeout(t2) }
+  }, [])
   // 包一层 try/catch：这个组件在 DSH 的右侧栏里独立渲染，一旦抛错整块就是白屏，
   // 用户看不到任何线索。这里把异常降级成一段可见的错误文字。
   try {

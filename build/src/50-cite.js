@@ -553,16 +553,12 @@ function fixHeightChain() {
         }
       }
       if (sc && sc.scrollTop) sc.scrollTop = 0
-      // 最后兜一层：右栏 panel 是 absolute + 固定高度（872 = 视口高 - 40，但顶栏实际 61），
-      // 无论谁算错，只要把整个页面锁住不滚，用户就不会看到「界面整体上移」。
-      // DSH 主界面本来就不应滚动，打开原文期间锁住没有副作用；卸载时恢复。
+      // 只锁 html，不碰 body：锁 body 会让 DSH 的布局高度塌掉（白屏）。
       var de = document.documentElement
-      if (!de.getAttribute('data-wk-locked')) {
+      if (de.getAttribute('data-wk-locked') === null) {
         de.setAttribute('data-wk-locked', de.style.overflow || '')
-        document.body.setAttribute('data-wk-locked', document.body.style.overflow || '')
+        de.style.overflow = 'hidden'
       }
-      de.style.overflow = 'hidden'
-      document.body.style.overflow = 'hidden'
     } catch (e2) {}
     logDiag('height-chain-fixed', { over: document.documentElement.scrollHeight - window.innerHeight })
   } catch (e) {}
@@ -599,17 +595,11 @@ function CiteTabBody(props) {
     var t2 = setTimeout(citeChainDump, 2500)
     return function () {
       clearTimeout(t0); clearTimeout(t1); clearTimeout(t2)
-      // tab 卸载（关闭右栏/切走）时把页面滚动能力还回去
       try {
         var de = document.documentElement
-        var b = document.body
         if (de.getAttribute('data-wk-locked') !== null) {
           de.style.overflow = de.getAttribute('data-wk-locked') || ''
           de.removeAttribute('data-wk-locked')
-        }
-        if (b.getAttribute('data-wk-locked') !== null) {
-          b.style.overflow = b.getAttribute('data-wk-locked') || ''
-          b.removeAttribute('data-wk-locked')
         }
       } catch (e) {}
     }

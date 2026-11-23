@@ -1683,21 +1683,6 @@ function WeKnoraPage(props) {
         )
       }),
     ) : null,
-    // 左：问答（WeKnora 原生体验，可切智能体）　右：知识库（库/分组/文件/预览）
-    h('div', { className: 'dsh-ima-split' },
-      h('div', { className: 'dsh-ima-qa-pane' },
-        h(QaPane, {
-          kbId: curKb && curKb.id,
-          kbName: curKb && curKb.name,
-          agentId: agentId,
-          agents: agents,
-          onAgent: function (v) { setAgentId(v) },
-          onOpenDoc: function (kid, title) {
-            openFile({ id: kid, title: title, file_name: title, file_type: '' })
-          },
-        }),
-      ),
-      h('div', { className: 'dsh-ima-kb-pane' },
     h('div', { className: 'dsh-ima-body' },
       // 左：知识库
       h('div', { className: 'dsh-ima-kbs' },
@@ -1870,8 +1855,6 @@ function WeKnoraPage(props) {
                     )
                   }),
                 ),
-      ),
-    ),
       ),
     ),
     showSetup ? h('div', {

@@ -2168,7 +2168,7 @@ function citeRoots() {
 
 function decorateCiteMarks() {
   var __n = _doDecorate()
-  try { logDiag('decorate', { n: __n, ledger: (CITE_LEDGER && CITE_LEDGER.cites || []).length, roots: (function(){ try { return citeRoots().length } catch (e) { return -1 } })() }) } catch (e) {}
+  if (__n > 0) { try { logDiag('decorate', { n: __n, ledger: (CITE_LEDGER && CITE_LEDGER.cites || []).length }) } catch (e) {} }
   return __n
 }
 function _doDecorate() {
@@ -2226,7 +2226,8 @@ function decorateOneRoot(root, map) {
 
 function logDiag(evt, data) {
   try {
-    fetch(API + '/diag', { method: 'POST', body: JSON.stringify({ evt: evt, data: data, at: Date.now() }) })
+    var s = evt + ' ' + JSON.stringify(data || {})
+    fetch(API + '/diag', { method: 'POST', body: s })
   } catch (e) { /* 忽略 */ }
 }
 
@@ -2953,8 +2954,7 @@ function LiveAnswer(props) {
     var es = new EventSource(API + '/live' + (liveKey ? '?k=' + encodeURIComponent(liveKey) : ''))
     logDiag('live-es', { k: liveKey || '' })
     es.onopen = function () { logDiag('live-open', { k: liveKey || '' }) }
-    es.onerror = function () { logDiag('live-error', { k: liveKey || '' }) }
-    es.onmessage = function () { logDiag('live-msg', { k: liveKey || '' }) }
+    var __msgN = 0
     var alive = true
     es.onmessage = function (ev) {
       if (!alive) return
@@ -2968,13 +2968,18 @@ function LiveAnswer(props) {
           return { text: old.text + (d.text || ''), done: false, err: '', started: old.started }
         })
       } else if (d.type === 'done') {
+        logDiag('live-done', { k: liveKey || '', chars: (d.text || '').length })
         setS(function (old) { return { text: old.text, done: true, err: old.err, started: old.started } })
         es.close()
+        // 生成结束时编号表才是全的：立刻拉一次并装饰，别等 4 秒轮询
+        fetchCiteLedger('').then(function () {
+          try { decorateCiteMarks() } catch (e) { /* 忽略 */ }
+        })
       } else if (d.type === 'empty') {
         es.close()
       }
     }
-    es.onerror = function () { /* 断了就断了，卡片上还有最终答案 */ }
+    es.onerror = function () { logDiag('live-error', { k: liveKey || '', msgN: __msgN }); /* 断了就断了，卡片上还有最终答案 */ }
     return function () { alive = false; try { es.close() } catch (e) { /* 忽略 */ } }
   }, [liveKey])
 

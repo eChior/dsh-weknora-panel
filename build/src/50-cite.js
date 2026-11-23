@@ -515,6 +515,30 @@ function CiteTabTitle(props) {
 // ── 客户端 PDF 渲染（pdfjs 画 canvas，命中段叠黄框）──
 var __pdfjs = null
 
+function fixHeightChain() {
+  // 数据（parent-chain 探针）：我们的容器 h=834、tabBody h=834，但**中间那层 DIV h=0**。
+  // 也就是说 DSH 的 wrapper 把高度链断掉了 —— 我们的 height:100% 解析成 0（白屏），
+  // 之前一直靠 min-height 硬造高度，造过头就把整页顶高。
+  // 正确做法：只把断掉的那一层接回 100%，之后完全由父级高度决定，不再猜像素。
+  try {
+    var el = document.querySelector('.dsh-wk-citetab')
+    for (var i = 0; el && i < 4; i++) {
+      var p = el.parentElement
+      if (!p) break
+      var cs = window.getComputedStyle(p)
+      if (p.clientHeight === 0 && (cs.height === 'auto' || cs.height === '0px')) {
+        p.style.height = '100%'
+        p.style.minHeight = '0'
+        p.style.display = 'flex'
+        p.style.flexDirection = 'column'
+        p.style.overflow = 'hidden'
+      }
+      el = p
+    }
+    logDiag('height-chain-fixed', { over: document.documentElement.scrollHeight - window.innerHeight })
+  } catch (e) {}
+}
+
 function citeChainDump() {
   // 量「我们的容器 → 右栏容器 → ... → body」每一层的实际高度：
   // 只有看清哪一层是 auto，才知道该把约束加在哪。
@@ -541,9 +565,10 @@ function citeChainDump() {
 function CiteTabBody(props) {
   // 挂载后量两次父链高度（700ms / 2500ms），看哪一层是 auto 高度、PDF 画完后溢出多少
   React.useEffect(function () {
+    var t0 = setTimeout(fixHeightChain, 120)
     var t1 = setTimeout(citeChainDump, 700)
     var t2 = setTimeout(citeChainDump, 2500)
-    return function () { clearTimeout(t1); clearTimeout(t2) }
+    return function () { clearTimeout(t0); clearTimeout(t1); clearTimeout(t2) }
   }, [])
   // 包一层 try/catch：这个组件在 DSH 的右侧栏里独立渲染，一旦抛错整块就是白屏，
   // 用户看不到任何线索。这里把异常降级成一段可见的错误文字。

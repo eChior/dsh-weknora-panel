@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><title>shadow cite test</title></head>
+<body>
+<div id="app"></div>
+<pre id="out">loading…</pre>
+<script>
+// 最小 React shim（和 dom-cite-test.cjs 同一套，够 client.js 顶层跑完）
+var fakeReact = function () {}
+Object.assign(fakeReact, {
+  createElement: function () { return {} }, useState: function (v) { return [v, function () {}] },
+  useEffect: function () {}, useRef: function () { return { current: null } },
+  useMemo: function (f) { return f() }, useCallback: function (f) { return f },
+  useReducer: function (r, i) { return [i, function () {}] },
+  createContext: function () { return { Provider: null, Consumer: null } }, Fragment: 'Fragment',
+  Children: { map: function (c) { return c }, toArray: function (c) { return c } },
+  Component: class { constructor(p) { this.props = p || {}; this.state = {} } setState() {} render() { return null } },
+  PureComponent: class { constructor(p) { this.props = p || {}; this.state = {} } setState() {} render() { return null } },
+  createRef: function () { return { current: null } }, forwardRef: function (f) { return f },
+  memo: function (f) { return f }, useLayoutEffect: function () {}, useImperativeHandle: function () {},
+  useDebugValue: function () {}, useId: function () { return 'id' },
+  isValidElement: function () { return false }, cloneElement: function (e) { return e },
+})
+window.__ModuleLoader__ = { load: function (entry) { window.__WK = entry.factory(function (n) { return n === 'react' ? fakeReact : {} }) } }
+
+// 造 shadow root，模拟 DSH 消息区
+var host = document.createElement('div')
+document.getElementById('app').appendChild(host)
+var sr = host.attachShadow({ mode: 'open' })
+sr.innerHTML = '<p id="p1">出差住宿标准按职级执行，一线城市不超过 600 元[1]，其他城市 450 元【2】。</p><p id="p9">这段的 [9] 不在编号表里。</p>'
+
+// fetch mock：ledger / diag
+window.fetch = function (u, o) {
+  var s = String(u)
+  if (s.indexOf('/ledger') >= 0) {
+    return Promise.resolve(new Response(JSON.stringify({ ok: true, cites: [
+      { n: 1, chunkId: 'cid-aaa', doc: 'A.docx' },
+      { n: 2, chunkId: 'cid-bbb', doc: 'B.docx' },
+    ] }), { status: 200, headers: { 'content-type': 'application/json' } }))
+  }
+  return Promise.resolve(new Response('{"ok":true}', { status: 200, headers: { 'content-type': 'application/json' } }))
+}
+</script>
+<script src="/lib/client.js?v=shadow1"></script>
+<script>
+var out = []
+function done() { document.getElementById('out').textContent = out.join('\n') }
+var mod = window.__WK
+out.push('module: ' + (mod ? Object.keys(mod).join(',') : 'MISSING'))
+if (mod && mod.__dev) {
+  mod.__dev.setLedger([
+    { n: 1, chunkId: 'cid-aaa', doc: 'A.docx' },
+    { n: 2, chunkId: 'cid-bbb', doc: 'B.docx' },
+  ])
+  var n = mod.__dev.decorateCiteMarks()
+  out.push('decorated: ' + n)
+  var links = sr.querySelectorAll('a[href^="dsh-weknora:"]')
+  out.push('anchors in shadow: ' + links.length)
+  for (var i = 0; i < links.length; i++) out.push('  a' + i + ' text=' + links[i].textContent + ' href=' + links[i].getAttribute('href'))
+  out.push('p1.text: ' + sr.getElementById('p1').textContent)
+  out.push('p9.text: ' + sr.getElementById('p9').textContent)
+  // 点击测试
+  var calls = []
+  window.__wkCtx = {
+    sidebarRight: {
+      isExpanded: function () { return true },
+      toggleExpanded: function () { calls.push('toggle') },
+      openTab: function (kind, o) { calls.push('openTab ' + kind + ' ' + JSON.stringify(o && o.params)) },
+    },
+  }
+  if (links[0]) {
+    var ev = new MouseEvent('click', { bubbles: true, composed: true, cancelable: true })
+    links[0].dispatchEvent(ev)
+    out.push('click defaultPrevented: ' + ev.defaultPrevented)
+  } else {
+    out.push('no link to click')
+  }
+  out.push('openTab calls: ' + JSON.stringify(calls))
+  out.push('citeTabParams: ' + JSON.stringify(mod.__dev.citeTabParams({})))
+  out.push('sessionStorage: ' + String(sessionStorage.getItem('dsh-weknora:last-cite')))
+} else {
+  out.push('no __dev export')
+}
+done()
+</script>
+</body></html>

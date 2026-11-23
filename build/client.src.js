@@ -2159,6 +2159,18 @@ function decorateSkip(node) {
   for (var el = node && node.parentElement; el; el = el.parentElement) {
     var t = el.tagName
     if (t === 'PRE' || t === 'CODE' || t === 'A' || t === 'TEXTAREA' || t === 'SCRIPT' || t === 'STYLE') return true
+    if (t === 'INPUT' || t === 'SELECT' || t === 'OPTION') return true
+    // 关键：输入框/编辑器里的 [1] 绝不能碰。之前只挡住了 textarea，
+    // 富文本编辑器（contenteditable 的 div）被误装饰，正在输入的拼音被拆散、
+    // 提交时还会把 <a> 一起发出去。
+    if (el.isContentEditable) return true
+    try {
+      if (el.getAttribute) {
+        var ce = el.getAttribute('contenteditable')
+        if (ce === '' || ce === 'true' || ce === 'plaintext-only') return true
+        if (el.getAttribute('role') === 'textbox') return true
+      }
+    } catch (e) { /* 忽略 */ }
   }
   return false
 }

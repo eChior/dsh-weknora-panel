@@ -1,0 +1,491 @@
+// 角标：点击、装饰器、右侧栏原文 tab
+// 由 build/src 拼接后注入 factory，和同目录其它片段共享作用域（不要加 import/export）。
+function openCiteDetail(ctx, detail) {
+  try { window.sessionStorage.setItem('dsh-weknora:last-cite', JSON.stringify(detail)) } catch (err) { /* 隐私模式忽略 */ }
+  // 优先在右侧边栏开一个原文 tab；只有右侧栏打不开时才退回面板，
+  // 否则点角标会顺带把左侧知识库面板切到那个文件，打扰正在看的东西。
+  var opened = openCiteInSidebar(ctx, detail)
+  // 无论右侧栏有没有开，都通知面板：面板正在预览时，点下一个角标要跟着切文件 / 跳页。
+  try { window.dispatchEvent(new CustomEvent('dsh-weknora:open-cite', { detail: detail })) } catch (e) { /* 忽略 */ }
+  console.log('[dsh-weknora] 角标点击 →', opened ? '右侧栏原文' : '面板原文', detail.chunkId)
+}
+
+/**
+ * 会话里 agent 回答带的角标是 <a href="dsh-weknora:c/<短码>">（或旧版的
+ * dsh-weknora:chunk/<id>?doc=...）。在 capture 阶段拦下，别让浏览器去导航，
+ * 改成在右侧边栏把原文渲染出来。
+ */
+function bindCiteLinks(ctx) {
+  if (window.__DSH_WK_CLICK_BOUND__) return
+  window.__DSH_WK_CLICK_BOUND__ = true
+  document.addEventListener('click', function (e) {
+    // 角标在 DSH 的 shadow root 里：事件冒泡到 document 时 e.target 已被 retarget 成
+    // shadow host，顺着 parentElement 永远找不到那个 <a>。必须用 composedPath() 取原始路径。
+    var el = null
+    var path = []
+    try { path = (e.composedPath && e.composedPath()) || [] } catch (err) { path = [] }
+    for (var pi = 0; pi < path.length; pi++) {
+      var pn = path[pi]
+      if (pn && pn.nodeType === 1 && pn.tagName === 'A' && /^dsh-weknora:/i.test(pn.getAttribute('href') || '')) {
+        el = pn
+        break
+      }
+    }
+    if (!el) {
+      var cur = e.target
+      while (cur && cur.nodeType === 1 && !(cur.tagName === 'A' && /^dsh-weknora:/i.test(cur.getAttribute('href') || ''))) {
+        cur = cur.parentElement
+      }
+      el = cur
+    }
+    if (!el || el.nodeType !== 1) return
+    var href = el.getAttribute('href') || ''
+
+    // 新格式：短码，先问宿主把 chunk id 换回来
+    var sc = /^dsh-weknora:c\/([0-9a-z]+)$/i.exec(href)
+    if (sc) {
+      e.preventDefault()
+      e.stopPropagation()
+      api('/cite?k=' + encodeURIComponent(sc[1])).then(function (r) {
+        if (!r || !r.ok || !r.chunkId) {
+          toast((r && r.message) || '这条出处已失效，请重新提问')
+          return
+        }
+        openCiteDetail(ctx, { chunkId: r.chunkId, doc: r.doc || '' })
+      }).catch(function (err) {
+        toast('出处解析失败：' + ((err && err.message) || err))
+      })
+      return
+    }
+
+    // 旧格式：chunk/<id>?doc=<文件名>（历史消息里可能还留着）
+    var m = /^dsh-weknora:chunk\/([^?#]+)(?:\?(.*))?$/i.exec(href)
+    if (!m) return
+    e.preventDefault()
+    e.stopPropagation()
+    var q = {}
+    ;(m[2] || '').split('&').forEach(function (kv) {
+      if (!kv) return
+      var i = kv.indexOf('=')
+      q[decodeURIComponent(i < 0 ? kv : kv.slice(0, i))] = i < 0 ? '' : decodeURIComponent(kv.slice(i + 1))
+    })
+    openCiteDetail(ctx, { chunkId: decodeURIComponent(m[1]), doc: q.doc || '' })
+  }, true)
+}
+
+// ── 正文角标装饰：把 [1] [2] 变成可点角标 ────────────────────────────
+// agent 转述 WeKnora 答案时，markdown 链接会被它简化掉；但 `[1]` 这种纯文本标记
+// 基本会原样保留。这里在 DOM 层把 `[1]` 换成 <a href="dsh-weknora:chunk/...">，
+// 复用 bindCiteLinks 的 capture 点击拦截，点一下就在右侧栏打开原文并标黄。
+var CITE_LEDGER = { cites: [], at: 0 }
+
+function fetchCiteLedger(key) {
+  return fetch(API + '/ledger' + (key ? '?k=' + encodeURIComponent(key) : ''), { headers: { accept: 'application/json' } })
+    .then(function (r) { return r.ok ? r.json() : null })
+    .then(function (j) {
+      if (j && j.ok && j.cites && j.cites.length) CITE_LEDGER = { cites: j.cites, at: Date.now() }
+      return CITE_LEDGER
+    })
+    .catch(function () { return CITE_LEDGER })
+}
+
+function citeLedgerMap() {
+  var m = {}
+  for (var i = 0; i < CITE_LEDGER.cites.length; i++) {
+    var c = CITE_LEDGER.cites[i]
+    if (c && c.n) m[Number(c.n)] = c
+  }
+  return m
+}
+
+function decorateSkip(node) {
+  for (var el = node && node.parentElement; el; el = el.parentElement) {
+    var t = el.tagName
+    if (t === 'PRE' || t === 'CODE' || t === 'A' || t === 'TEXTAREA' || t === 'SCRIPT' || t === 'STYLE') return true
+    if (t === 'INPUT' || t === 'SELECT' || t === 'OPTION') return true
+    // 关键：输入框/编辑器里的 [1] 绝不能碰。之前只挡住了 textarea，
+    // 富文本编辑器（contenteditable 的 div）被误装饰，正在输入的拼音被拆散、
+    // 提交时还会把 <a> 一起发出去。
+    if (el.isContentEditable) return true
+    try {
+      if (el.getAttribute) {
+        var ce = el.getAttribute('contenteditable')
+        if (ce === '' || ce === 'true' || ce === 'plaintext-only') return true
+        if (el.getAttribute('role') === 'textbox') return true
+      }
+    } catch (e) { /* 忽略 */ }
+  }
+  return false
+}
+
+// DSH 的消息区可能挂在 shadow root 里（插件样式都要往每个 shadowRoot 塞一份），
+// 所以装饰器不能只看 document.body，得把所有 shadow root 一起扫。
+function citeRoots() {
+  var out = []
+  var seen = []
+  var walk = function (root) {
+    if (!root || seen.indexOf(root) >= 0) return
+    seen.push(root)
+    out.push(root)
+    var els
+    try { els = root.querySelectorAll('*') } catch (e) { return }
+    for (var i = 0; i < els.length; i++) {
+      var sr = els[i] && els[i].shadowRoot
+      if (sr) walk(sr)
+    }
+  }
+  try { if (document.body) walk(document.body) } catch (e) { /* 忽略 */ }
+  return out
+}
+
+function decorateCiteMarks() {
+  var __n = _doDecorate()
+  if (__n > 0) { try { logDiag('decorate', { n: __n, ledger: (CITE_LEDGER && CITE_LEDGER.cites || []).length }) } catch (e) {} }
+  return __n
+}
+function _doDecorate() {
+  var map = citeLedgerMap()
+  if (!Object.keys(map).length) return 0
+  var roots = citeRoots()
+  if (!roots.length) return 0
+  var total = 0
+  roots.forEach(function (root) { total += decorateOneRoot(root, map) })
+  return total
+}
+
+// 只认短码 [#ab12cd34]。裸 [1] 一律不装饰：
+// 正文示例、代码里的 m[1]、思考过程里的编号都会被误伤，
+// 之前把推理区里的 m[1] 染成蓝角标就是这么来的。
+var MARK_RE = /[\[【]#([0-9a-z]{6,12})[\]】]/g
+var CITE_SHORT = Object.create(null)
+
+function decorateOneRoot(root, map) {
+  var localSeq = { __n: 0 }
+  var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null)
+  var nodes = []
+  var node
+  while ((node = walker.nextNode())) {
+    var txt = node.nodeValue
+    if (!txt || (txt.indexOf('[') < 0 && txt.indexOf('【') < 0)) continue
+    // 新格式 [#ab12cd34]（短码，全局唯一）；旧格式 [1] / 【1】（历史消息）
+    if (!MARK_RE.test(txt)) continue
+    if (decorateSkip(node)) continue
+    nodes.push(node)
+  }
+  var done = 0
+  for (var j = 0; j < nodes.length; j++) {
+    var src = nodes[j]
+    var text = src.nodeValue
+    var re = MARK_RE
+    re.lastIndex = 0
+    var frag = document.createDocumentFragment()
+    var last = 0
+    var m
+    var changed = false
+    while ((m = re.exec(text))) {
+      var short = m[1] || ''
+      var a
+      if (short) {
+        // 短码：不需要编号表，短码本身就指向唯一 chunk。
+        // 显示编号按「本条消息内第几次出现」算，所以每条回答都从 1 开始。
+        var seq = localSeq[short]
+        if (!seq) { seq = (++localSeq.__n); localSeq[short] = seq }
+        var info = (CITE_SHORT && CITE_SHORT[short]) || null
+        var doc = info ? info.doc : ''
+        if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)))
+        a = document.createElement('a')
+        a.className = 'dsh-ima-cite dsh-ima-cite-dom'
+        a.setAttribute('href', 'dsh-weknora:c/' + short)
+        a.setAttribute('title', (doc ? doc + ' · ' : '') + '第 ' + seq + ' 处出处')
+        a.setAttribute('data-wk-cite', short)
+        a.textContent = String(seq)
+        frag.appendChild(a)
+        last = m.index + m[0].length
+        changed = true
+        done++
+        continue
+      }
+    }
+    if (!changed || !src.parentNode) continue
+    if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)))
+    src.parentNode.replaceChild(frag, src)
+  }
+  return done
+}
+
+function logDiag(evt, data) {
+  try {
+    var s = evt + ' ' + JSON.stringify(data || {})
+    fetch(API + '/diag', { method: 'POST', body: s })
+  } catch (e) { /* 忽略 */ }
+}
+
+function observeCiteMarks() {
+  if (window.__DSH_WK_CITE_OBS__) return
+  window.__DSH_WK_CITE_OBS__ = true
+  var timer = null
+  var run = function () {
+    if (timer) return
+    timer = setTimeout(function () {
+      timer = null
+      try { decorateCiteMarks() } catch (e) { /* 忽略 */ }
+    }, 400)
+  }
+  // 只对「非编辑区」的变化做装饰：输入框里打字也会触发 MutationObserver，
+  // 之前每个字符都触发一次全文档扫描，正在输入的拼音被拆散、提交时还带着 <a>。
+  try {
+    var mo = new MutationObserver(function (muts) {
+      for (var i = 0; i < muts.length; i++) {
+        if (!decorateSkip(muts[i].target)) { run(); return }
+      }
+    })
+    mo.observe(document.body, { childList: true, subtree: true, characterData: true })
+  } catch (e) { /* 忽略 */ }
+  fetchCiteLedger('').then(function () { try { decorateCiteMarks() } catch (e) { /* 忽略 */ } })
+  setInterval(run, 4000)
+}
+
+// 角标样式一定要在会话正文第一次渲染前就位，否则用户会先看到一个蓝色下划线链接，
+// 紧接着才被 CSS 改成上标角标（肉眼可见的闪烁）。
+try { injectCiteStyles() } catch (e) { /* 忽略 */ }
+
+// ── 右侧边栏里的「知识库原文」tab ─────────────────────────
+var CITE_TAB_ID = 'dsh-weknora-panel/cite'
+var CITE_TAB_KIND = 'weknora-cite'
+var __wkCtx = null
+
+/** 关掉原文 tab：直接把整列收起，不留下一个空的默认页 */
+function closeCiteTab() {
+  try {
+    if (__wkCtx && __wkCtx.sidebarRight && typeof __wkCtx.sidebarRight.toggleExpanded === 'function') {
+      if (typeof __wkCtx.sidebarRight.isExpanded !== 'function' || __wkCtx.sidebarRight.isExpanded()) {
+        __wkCtx.sidebarRight.toggleExpanded()
+      }
+    }
+  } catch (e) { /* 忽略 */ }
+}
+
+/**
+ * 打开右侧栏原文 tab。左侧会话栏完全不动 —— 之前会顺手收起左侧栏，
+ * 导致用户正在看的会话被关掉、还留下一个空的「开始」页。
+ */
+/**
+ * 最近一次角标点击的 { chunkId, doc }。
+ *
+ * 为什么要这个全局变量：`sidebarRight.openTab(kind, {params})` 传进去的 params
+ * 在 tab 正文里能不能取到，取决于 DSH 版本（0.2.2-rc.1 的 `tab.navigation` 是
+ * snapshot store，且 slot 组件的 props 里不保证有 useTabInfo）。点击和打开发生在
+ * 同一个前端上下文里，直接记一份最稳；params 仅作为刷新/恢复时的兜底。
+ */
+var PENDING_CITE = null
+
+function openCiteInSidebar(ctx, detail) {
+  try {
+    if (!ctx || !ctx.sidebarRight || typeof ctx.sidebarRight.openTab !== 'function') return false
+    PENDING_CITE = { chunkId: String(detail.chunkId || ''), doc: String(detail.doc || ''), at: Date.now() }
+    if (typeof ctx.sidebarRight.isExpanded === 'function' && !ctx.sidebarRight.isExpanded()) {
+      ctx.sidebarRight.toggleExpanded()
+    }
+    // revealIfOpened：同 kind 的 tab 已经开着就复用，不要每点一次角标就再开一个
+    // （之前连续点不同角标会堆出好几个 tab，右侧栏高度被挤乱、整个会话区跟着错位）。
+    ctx.sidebarRight.openTab(CITE_TAB_KIND, { params: { chunkId: detail.chunkId, doc: detail.doc || '' }, revealIfOpened: true })
+    return true
+  } catch (e) {
+    console.warn('[dsh-weknora] 右侧栏打开失败，退回面板:', e && e.message)
+    return false
+  }
+}
+
+function citeTabParams(props) {
+  // 1) 刚刚点过角标：直接用内存里那份（最可靠，绕开 DSH 各版本 params 传递差异）
+  if (PENDING_CITE && PENDING_CITE.chunkId) return PENDING_CITE
+  // 2) 内存丢了（tab 在另一个渲染周期被重建、插件被热重载过）就读上次点击落下的那份
+  try {
+    var last = window.sessionStorage.getItem('dsh-weknora:last-cite')
+    if (last) {
+      var parsed = JSON.parse(last)
+      if (parsed && parsed.chunkId) return parsed
+    }
+  } catch (e) { /* 忽略 */ }
+  // 3) 兜底：从 tab 的 navigation snapshot 里取（刷新后恢复 tab 时用得到）
+  try {
+    var info = props && props.useTabInfo ? props.useTabInfo() : null
+    var tab = info && info.tab
+    var nav = tab && tab.navigation
+    var snap = nav && typeof nav.getSnapshot === 'function' ? nav.getSnapshot() : nav
+    return (snap && snap.params) || (tab && tab.params) || {}
+  } catch (e) { return {} }
+}
+
+/** 右侧栏 tab 的标题：优先文件名 */
+function CiteTabTitle(props) {
+  var p = citeTabParams(props)
+  return p.doc || '知识库原文'
+}
+
+/** 右侧栏 tab 的正文：整篇按分块渲染，命中段标黄 */
+// ── 客户端 PDF 渲染（pdfjs 画 canvas，命中段叠黄框）──
+var __pdfjs = null
+
+function CiteTabBody(props) {
+  var p = citeTabParams(props)
+  // 这条 tab 会被复用：同一个 kind 再 openTab 时 DSH 不一定重新挂载组件，
+  // 所以 chunkId 必须是 state，并订阅「角标被点」事件来换内容 —— 否则用户点了新角标，
+  // 组件还端着第一次挂载时那份空参数，一直显示「没有传到 chunk id」。
+  var cidSt = React.useState(p.chunkId || '')
+  var chunkId = cidSt[0], setChunkId = cidSt[1]
+  var docSt = React.useState(doc || '')
+  var doc = docSt[0], setDoc = docSt[1]
+  React.useEffect(function () {
+    function onOpen(ev) {
+      var d = ev && ev.detail
+      if (d && d.chunkId) { setChunkId(String(d.chunkId)); setDoc(String(d.doc || '')) }
+    }
+    window.addEventListener('dsh-weknora:open-cite', onOpen)
+    return function () { window.removeEventListener('dsh-weknora:open-cite', onOpen) }
+  }, [])
+  var st = React.useState({ loading: true, error: '', doc: doc, items: [], focusId: chunkId })
+  var s = st[0], setS = st[1]
+  // 侧边栏默认就用 PDF 原件（LibreOffice 转出来的排版），需要复制文字时才切「看文本」
+  var ob = React.useState(true); var officeOn = ob[0], setOfficeOn = ob[1]
+  // 命中段在 PDF 的第几页 —— 拿到后给 iframe 加 #page=N，直接翻过去
+  var pg = React.useState(0); var page = pg[0], setPage = pg[1]
+  var rd = React.useState(false); var pageReady = rd[0], setPageReady = rd[1]
+
+  React.useEffect(function () {
+    var alive = true
+    if (!chunkId) { setS({ loading: false, error: '没有传到 chunk id', doc: doc || '', items: [], focusId: '' }); return function () {} }
+    setS({ loading: true, error: '', doc: doc || '', items: [], focusId: chunkId })
+    api('/chunk?id=' + encodeURIComponent(chunkId)).then(function (r) {
+      if (!alive) return null
+      if (!r || !r.ok) throw new Error((r && r.message) || '取不到这段原文')
+      var kid = r.knowledge_id || ''
+      var kbId = r.knowledge_base_id || ''
+      return api('/text?id=' + encodeURIComponent(kid) + '&kbId=' + encodeURIComponent(kbId)).then(function (t) {
+        if (!alive) return
+        var items = (t && (t.items || t.chunks)) || []
+        if (!Array.isArray(items)) items = []
+        setS({
+          loading: false,
+          error: '',
+          doc: doc || (t && t.title) || '',
+          items: items,
+          focusId: chunkId,
+          knowledgeId: kid,
+          kbId: kbId,
+        })
+      })
+    }).catch(function (e) {
+      if (alive) setS({ loading: false, error: msg(e), doc: doc || '', items: [], focusId: chunkId })
+    })
+    return function () { alive = false }
+  }, [chunkId])
+
+  React.useEffect(function () {
+    if (s.loading) return
+    var box = document.querySelector('.dsh-ima-citetab .dsh-ima-hl')
+    if (box && box.scrollIntoView) {
+      try { box.scrollIntoView({ block: 'center' }) } catch (e) { /* 忽略 */ }
+    }
+  }, [s.loading, s.focusId])
+
+  // 原件模式下问一下命中段在第几页（服务端用 pdfjs 逐页抽文本定位）
+  React.useEffect(function () {
+    if (!officeOn || !s.knowledgeId) { setPageReady(true); return undefined }
+    var alive = true
+    setPageReady(false)
+    api('/pdfpage?id=' + encodeURIComponent(s.knowledgeId) + '&chunk=' + encodeURIComponent(chunkId))
+      .then(function (r) { if (alive && r && r.ok && r.page) setPage(r.page) })
+      .catch(function () { /* 定位失败就从第一页看 */ })
+      .then(function () { if (alive) setPageReady(true) })
+    return function () { alive = false }
+  }, [officeOn, s.knowledgeId, chunkId])
+
+  if (s.loading) return h('div', { className: 'dsh-ima-citetab' }, h('div', { className: 'dsh-ima-note' }, '正在取原文…'))
+  if (s.error) return h('div', { className: 'dsh-ima-citetab' }, h('div', { className: 'dsh-ima-err' }, s.error))
+
+  var body = s.items.length
+    ? s.items.map(function (c, i) {
+      var hit = c.id === s.focusId
+      return h('div', {
+        className: 'dsh-ima-chunk' + (hit ? ' dsh-ima-hl' : ''),
+        key: c.id || ('p' + i),
+      }, renderMarkdown(fixResourceUrls(c.content || '', s.kbId)))
+    })
+    : h('div', { className: 'dsh-ima-note' }, '这篇没有分块正文')
+
+  var hitItem = null
+  s.items.forEach(function (c) { if (c.id === s.focusId) hitItem = c })
+  var hitIdx = hitItem ? s.items.indexOf(hitItem) + 1 : 0
+  var kbOfCite = (hitItem && hitItem.knowledge_base_id) || s.kbId || ''
+
+  // 定位没成功时不传 needle：宁可不标黄，也不要停在第一页乱标一屏黄框
+  var located = page > 0
+  return h('div', { className: 'dsh-ima-citetab' },
+    h('div', { className: 'dsh-ima-citetab-h' },
+      h(FileTypeIcon, { type: extOf(s.doc || '') }),
+      h('span', { className: 'dsh-ima-citetab-t', title: s.doc }, s.doc || '原文'),
+      h('span', { className: 'dsh-ima-spacer' }),
+      s.knowledgeId && OFFICE_TYPES[extOf(s.doc || '')]
+        ? h('button', {
+          className: 'dsh-ima-btn' + (officeOn ? ' dsh-ima-actbtn-on' : ''),
+          title: officeOn ? '切到分块文本（可复制）' : '用 LibreOffice 原件排版打开',
+          onClick: function () { setOfficeOn(!officeOn) },
+        }, officeOn ? '看文本' : '原件')
+        : null,
+      h('span', { className: 'dsh-ima-badge' }, s.items.length + ' 段'),
+      h('button', {
+        className: 'dsh-ima-x',
+        title: '关闭原文（收起右侧栏）',
+        onClick: function () { closeCiteTab() },
+      }, '✕'),
+    ),
+    officeOn && s.knowledgeId
+      ? h('div', { className: 'dsh-ima-citetab-b dsh-ima-nos' },
+          !pageReady
+            ? h('div', { className: 'dsh-ima-note' }, '正在定位原文所在页…')
+            : h(PdfView, {
+              id: s.knowledgeId,
+              page: located ? page : 0,
+              needle: located && hitItem ? String(hitItem.content || '') : '',
+            }))
+      : h('div', { className: 'dsh-ima-citetab-b' }, body),
+  )
+}
+
+// ── 会话里的工具卡片：订阅宿主推来的增量，边生成边显示 ──
+
+// 卡片里的角标点击（没有 ctx 时退回右侧栏 tab 的全局事件）
+
+
+function registerCiteTab(ctx) {
+  try {
+    if (!ctx.sidebarRightTabs || !ctx.sidebarRight) {
+      console.warn('[dsh-weknora] 没有 sidebarRight / sidebarRightTabs，角标只开面板')
+      return false
+    }
+    ctx.effect(function () {
+      return ctx.sidebarRightTabs.register({
+        id: CITE_TAB_ID,
+        kind: CITE_TAB_KIND,
+        priority: 'extension',
+        title: function () { return '知识库原文' },
+      })
+    }, 'dsh-weknora: cite tab type')
+    ctx.effect(function () {
+      return ctx.slots.inject('sidebar.right.pane.tab', function () {
+        return ctx.slots.register({ name: 'sidebar.right.pane.tab', key: CITE_TAB_ID }, CiteTabBody)
+      })
+    }, 'dsh-weknora: cite tab body')
+    ctx.effect(function () {
+      return ctx.slots.inject('sidebar.right.pane.tab.title', function () {
+        return ctx.slots.register({ name: 'sidebar.right.pane.tab.title', key: CITE_TAB_ID }, CiteTabTitle)
+      })
+    }, 'dsh-weknora: cite tab title')
+  } catch (e) {
+    console.warn('[dsh-weknora] 右侧栏原文 tab 注册失败，角标退回面板:', e && e.message)
+    return false
+  }
+  console.log('[dsh-weknora] 右侧栏原文 tab 已注册 kind=' + CITE_TAB_KIND)
+  return true
+}

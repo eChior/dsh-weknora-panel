@@ -79,12 +79,20 @@ const viewerCode = jsFiles.sort((a, b) => b.text.length - a.text.length).map((f)
 if (!viewerCode) throw new Error('构建失败：没有产出 JS')
 console.log(`[build] 引擎: ${(viewerCode.length / 1024).toFixed(0)} KB, 样式: ${(viewerCss.length / 1024).toFixed(0)} KB`)
 
-const clientSrc = fs.readFileSync(path.join(here, 'client.src.js'), 'utf8')
+// 前端源码按文件名排序拼接（00-css → 80-apply）。切片共享同一个 factory 作用域，
+// 所以片段之间不要写 import/export，函数用 function 声明即可互相调用。
+const srcDir = path.join(here, 'src')
+const clientSrc = fs
+  .readdirSync(srcDir)
+  .filter((f) => f.endsWith('.js'))
+  .sort()
+  .map((f) => fs.readFileSync(path.join(srcDir, f), 'utf8'))
+  .join('\n\n')
 
 /** 缩进，让它嵌进 factory 里也好看 */
 const indent = (s, n) => s.split('\n').map((l) => (l ? ' '.repeat(n) + l : l)).join('\n')
 
-const out = `/* 自动生成，请勿直接编辑。源码：build/client.src.js + build/viewer.src.js */
+const out = `/* 自动生成，请勿直接编辑。源码：build/src/*.js + build/viewer.src.js */
 /* 重新构建：node build/build.mjs */
 window.__ModuleLoader__.load({
   id: 'dsh-weknora-panel',

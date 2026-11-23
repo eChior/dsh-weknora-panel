@@ -2167,6 +2167,11 @@ function citeRoots() {
 }
 
 function decorateCiteMarks() {
+  var __n = _doDecorate()
+  try { logDiag('decorate', { n: __n, ledger: (CITE_LEDGER && CITE_LEDGER.cites || []).length, roots: (function(){ try { return citeRoots().length } catch (e) { return -1 } })() }) } catch (e) {}
+  return __n
+}
+function _doDecorate() {
   var map = citeLedgerMap()
   if (!Object.keys(map).length) return 0
   var roots = citeRoots()
@@ -2217,6 +2222,12 @@ function decorateOneRoot(root, map) {
     src.parentNode.replaceChild(frag, src)
   }
   return done
+}
+
+function logDiag(evt, data) {
+  try {
+    fetch(API + '/diag', { method: 'POST', body: JSON.stringify({ evt: evt, data: data, at: Date.now() }) })
+  } catch (e) { /* 忽略 */ }
 }
 
 function observeCiteMarks() {
@@ -2940,6 +2951,10 @@ function LiveAnswer(props) {
 
   React.useEffect(function () {
     var es = new EventSource(API + '/live' + (liveKey ? '?k=' + encodeURIComponent(liveKey) : ''))
+    logDiag('live-es', { k: liveKey || '' })
+    es.onopen = function () { logDiag('live-open', { k: liveKey || '' }) }
+    es.onerror = function () { logDiag('live-error', { k: liveKey || '' }) }
+    es.onmessage = function () { logDiag('live-msg', { k: liveKey || '' }) }
     var alive = true
     es.onmessage = function (ev) {
       if (!alive) return

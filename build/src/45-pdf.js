@@ -139,6 +139,9 @@ function PdfView(props) {
   targetRef.current = wantPage || targetRef.current
   var vs = React.useState({ loading: true, error: '', num: 0, cur: 1, ready: false })
   var s = vs[0], setS = vs[1]
+  // 0 = 适应宽度；>0 表示按容器宽度的倍数缩放
+  var zs = React.useState(0)
+  var zoom = zs[0], setZoom = zs[1]
 
   // 1) 打开文档
   React.useEffect(function () {
@@ -177,7 +180,8 @@ function PdfView(props) {
 
     function build() {
       if (!alive || !box) return
-      var width = Math.max(300, (box.clientWidth || 560) - 16)
+      var baseW = Math.max(300, (box.clientWidth || 560) - 16)
+      var width = zoom > 0 ? Math.round(baseW * zoom) : baseW
       var h = Math.round(width * ratio)
       for (var i = 0; i < s.num; i++) {
         var w = document.createElement('div')
@@ -427,7 +431,7 @@ function PdfView(props) {
       obsRef.current = null
       if (ob) { try { ob.disconnect() } catch (e) { /* 忽略 */ } }
     }
-  }, [s.ready, s.num, id, needle])
+  }, [s.ready, s.num, id, needle, zoom])
 
   // 3) 页码跟着滚动走（右下角浮着，不占版面）
   React.useEffect(function () {
@@ -448,7 +452,20 @@ function PdfView(props) {
     return function () { box.removeEventListener('scroll', onScroll) }
   }, [s.ready])
 
+  function stepZoom(delta) {
+    setZoom(function (z) {
+      var cur = z > 0 ? z : 1
+      var next = Math.round((cur + delta) * 100) / 100
+      if (next < 0.5) next = 0.5
+      if (next > 3) next = 3
+      return next
+    })
+  }
   return h('div', { className: 'dsh-ima-pdf' },
+    h('div', { className: 'dsh-ima-pdfbar' },
+      h('button', { className: 'dsh-ima-zbtn', title: '缩小', onClick: function () { stepZoom(-0.15) } }, '−'),
+      h('button', { className: 'dsh-ima-zbtn dsh-ima-zbtn-w', title: '点击恢复适应宽度', onClick: function () { setZoom(0) } }, zoom > 0 ? Math.round(zoom * 100) + '%' : '适应宽度'),
+      h('button', { className: 'dsh-ima-zbtn', title: '放大', onClick: function () { stepZoom(0.15) } }, '＋')),
     s.error ? h('div', { className: 'dsh-ima-err' }, s.error) : null,
     s.loading ? h('div', { className: 'dsh-ima-note' }, '正在打开原件…') : null,
     h('div', { className: 'dsh-ima-pdfbox', ref: holder }),

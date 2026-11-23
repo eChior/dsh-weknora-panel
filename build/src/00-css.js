@@ -165,7 +165,7 @@ var CSS = [
   '.dsh-ima-pdfbar{display:flex;align-items:center;gap:8px;padding:0 0 6px}',
   '.dsh-ima-pdfno{font-size:12px;color:#666}',
   '.dsh-ima-pdfno-float{position:absolute;right:12px;bottom:10px;z-index:3;padding:2px 8px;border-radius:10px;background:rgba(0,0,0,.5);color:#fff;font-size:11px;line-height:16px;pointer-events:none}',
-  '.dsh-ima-pdfbox{position:relative;flex:1;min-height:0;overflow:auto;background:#f5f5f5;border:1px solid #e2e2e2;border-radius:4px;scroll-behavior:auto}',
+  '.dsh-ima-pdfbox{position:relative;flex:1;min-height:0;max-height:calc(100vh - 200px);overflow:auto;background:#f5f5f5;border:1px solid #e2e2e2;border-radius:4px;scroll-behavior:auto}',
   '.dsh-ima-pdfpage{position:relative;margin:8px auto}',
   '.dsh-ima-pdfcanvas{display:block;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.12)}',
   '.dsh-ima-pdfhl{position:absolute;background:rgba(255,214,10,.45);border-radius:2px;pointer-events:none}',
@@ -177,7 +177,7 @@ var CSS = [
   '.dsh-ima-x{width:20px;height:20px;padding:0;border:none;border-radius:4px;background:transparent;color:#888;font-size:12px;line-height:20px;cursor:pointer;flex-shrink:0}',
   '.dsh-ima-x:hover{background:rgba(0,0,0,.08);color:#333}',
   // ── 右侧边栏「知识库原文」tab ──
-  '.dsh-ima-citetab{display:flex;flex-direction:column;height:100%;min-height:0;min-width:0;font-size:13px;line-height:1.75;color:var(--dsw-alias-label-primary,#1a1a1a);background:var(--dsw-alias-bg-primary,#fff)}',
+  '.dsh-ima-citetab{display:flex;flex-direction:column;height:100%;max-height:calc(100vh - 140px);min-height:0;min-width:0;overflow:hidden;font-size:13px;line-height:1.75;color:var(--dsw-alias-label-primary,#1a1a1a);background:var(--dsw-alias-bg-primary,#fff)}',
   // 右侧栏 tab 的容器在 DSH 里可能是 auto 高度，height:100% 会塌成 0 → 预览一片白。
   '.dsh-ima-citetab-b>div{min-height:0}',
   '.dsh-ima-citetab-h{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.08));flex-shrink:0}',

@@ -612,7 +612,7 @@ function CiteTabBody(props) {
   // 包一层 try/catch：这个组件在 DSH 的右侧栏里独立渲染，一旦抛错整块就是白屏，
   // 用户看不到任何线索。这里把异常降级成一段可见的错误文字。
   try {
-    return h('div', { className: 'dsh-wk-citehost' }, h(CiteTabBodyInner, props))
+    return h(CiteTabBodyInner, props)
   } catch (e) {
     return h('div', { className: 'dsh-wk-citetab' },
       h('div', { className: 'dsh-wk-err' }, '打开原文出错：' + ((e && e.message) || String(e))))

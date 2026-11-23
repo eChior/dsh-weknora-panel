@@ -595,23 +595,27 @@ function registerCiteTab(ctx) {
         title: function () { return '知识库原文' },
       })
     }, 'dsh-weknora: cite tab type')
-    ctx.effect(function () {
-      return ctx.slots.inject('sidebar.right.pane.tab', function () {
-        // 注册体只带 name+key：与 better-sidebar 一致，避免额外字段触发注册校验失败
-        // （看过 DSH 的 bodiesFor：seat 未命中时会渲染「这类内容还没有可用的查看方式」）。
-        return ctx.slots.register({ name: 'sidebar.right.pane.tab', key: CITE_TAB_ID }, CiteTabBody)
 
-      })
-    }, 'dsh-weknora: cite tab body')
-    ctx.effect(function () {
-      return ctx.slots.inject('sidebar.right.pane.tab.title', function () {
-        return ctx.slots.register({ name: 'sidebar.right.pane.tab.title', key: CITE_TAB_ID }, CiteTabTitle)
-      })
-    }, 'dsh-weknora: cite tab title')
+    // DSH 的 TabSlot 用 `entryKey = definition?.id ?? tab.kind` 找内容。
+    // definition 没被 useTabTypes 命中时会退化成 kind，所以 id 与 kind 各注册一份，
+    // 否则会落到 fallback：「这类内容还没有可用的查看方式」。
+    var keys = [CITE_TAB_ID, CITE_TAB_KIND]
+    keys.forEach(function (k) {
+      ctx.effect(function () {
+        return ctx.slots.inject('sidebar.right.pane.tab', function () {
+          return ctx.slots.register({ name: 'sidebar.right.pane.tab', key: k }, CiteTabBody)
+        })
+      }, 'dsh-weknora: cite tab body ' + k)
+      ctx.effect(function () {
+        return ctx.slots.inject('sidebar.right.pane.tab.title', function () {
+          return ctx.slots.register({ name: 'sidebar.right.pane.tab.title', key: k }, CiteTabTitle)
+        })
+      }, 'dsh-weknora: cite tab title ' + k)
+    })
   } catch (e) {
     console.warn('[dsh-weknora] 右侧栏原文 tab 注册失败，角标退回面板:', e && e.message)
     return false
   }
-  console.log('[dsh-weknora] 右侧栏原文 tab 已注册 kind=' + CITE_TAB_KIND)
+  console.log('[dsh-weknora] 右侧栏原文 tab 已注册 kind=' + CITE_TAB_KIND + '（id/kind 双 key）')
   return true
 }

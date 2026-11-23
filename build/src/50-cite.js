@@ -547,7 +547,7 @@ function CiteTabBodyInner(props) {
   var s = st[0], setS = st[1]
   // 默认走「文本」：分块拼接 + 命中段标黄，纯 DOM 渲染，不依赖 pdfjs/canvas，
   // 因此不可能白屏。要看排版时点「原件」再切 PDF。
-  var ob = React.useState(false); var officeOn = ob[0], setOfficeOn = ob[1]
+  var ob = React.useState(true); var officeOn = ob[0], setOfficeOn = ob[1]
   // 命中段在 PDF 的第几页 —— 拿到后给 iframe 加 #page=N，直接翻过去
   var pg = React.useState(0); var page = pg[0], setPage = pg[1]
   var rd = React.useState(false); var pageReady = rd[0], setPageReady = rd[1]
@@ -644,10 +644,13 @@ function CiteTabBodyInner(props) {
       ? h('div', { className: 'dsh-wk-citetab-b dsh-wk-nos' },
           !pageReady
             ? h('div', { className: 'dsh-wk-note' }, '正在定位原文所在页…')
-            : h(PdfView, {
-              id: s.knowledgeId,
-              page: located ? page : 0,
-              needle: located && hitItem ? String(hitItem.content || '') : '',
+            : h('iframe', {
+              className: 'dsh-wk-pdfframe',
+              // 交给浏览器原生 PDF 渲染：缩放/翻页/文字选择都由它负责，
+              // 不再经过 pdfjs worker（那条路一旦 worker 起不来就是一片白）。
+              src: API + '/pdf?id=' + encodeURIComponent(s.knowledgeId)
+                + (located && page > 1 ? '#page=' + page : ''),
+              title: '原件预览',
             }))
       : h('div', { className: 'dsh-wk-citetab-b' }, body),
   )

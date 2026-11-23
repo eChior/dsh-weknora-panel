@@ -289,10 +289,11 @@ function usePanelState() {
             h('button', { className: 'dsh-wk-btn', onClick: function () { sendToConversation('请打开这个表格文件：' + (preview.file.title || preview.file.file_name || '')) } }, '交给对话')))
       } else if (previewIsOffice && officeOn) {
         previewBody = h('div', { className: 'dsh-wk-nos' },
-          h(PdfView, {
-            id: preview.file.id,
-            page: preview.page || 0,
-            needle: preview.focusContent || '',
+          h('iframe', {
+            className: 'dsh-wk-pdfframe',
+            src: '/api/weknora/pdf?id=' + encodeURIComponent(preview.file.id)
+              + (preview.page > 1 ? '#page=' + preview.page : ''),
+            title: '原件预览',
           }))
       } else {
         previewBody = h('div', { className: 'dsh-wk-pre' },

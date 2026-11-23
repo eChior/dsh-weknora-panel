@@ -377,8 +377,32 @@ function probeLayout(tag) {
       for (var hl = 0; hl < hs2.length; hl++) hs2[hl].style.display = sv2[hl]
       hideTest = { base: b0, noHost: b1, noTab: b2, hosts: hs.length, tabs: hs2.length }
     } catch (eH) {}
+    // 逐个隐藏 body 的直接子元素，看谁一消失页面就回落到视口高 —— 直接点名元凶。
+    var bisect = null
+    try {
+      var deB = document.documentElement
+      var full = deB.scrollHeight
+      if (full > (window.innerHeight || 0) + 1) {
+        bisect = []
+        var kidsB = document.body.children
+        for (var bi = 0; bi < kidsB.length; bi++) {
+          var kb = kidsB[bi]
+          if (!kb || kb.tagName === 'SCRIPT') continue
+          var prev = kb.style.display
+          kb.style.display = 'none'
+          var h2b = deB.scrollHeight
+          kb.style.display = prev
+          if (full - h2b > 0) {
+            var bc = ''
+            try { bc = String(kb.className || '').slice(0, 44) } catch (eC) { bc = '' }
+            bisect.push({ el: kb.tagName + (bc ? '.' + bc : ''), freed: full - h2b })
+          }
+        }
+      }
+    } catch (eB2) {}
     logDiag('layout', {
       tag: tag,
+      bisect: bisect,
       hideTest: hideTest,
       scrollY: window.scrollY || 0,
       overX: overX,
@@ -531,6 +555,17 @@ function openCiteInSidebar(ctx, detail) {
     // params 用「恒定值」：contentId = pageAddress(kind, params)，恒定的 params 让同一个
     // kind 永远复用同一个 tab（不会每点一次多开一个），内容仍由 PENDING_CITE 推给 tab 自己更新。
     ctx.sidebarRight.openTab(CITE_TAB_KIND, { params: { mode: 'cite' }, revealIfOpened: true })
+    // 打开右侧栏会改变主区宽度，DSH 侧有些容器（如 better-sidebar 的底部面板）
+    // 打开后没有重算，页面就一直多出 21px、关掉右栏也回不去。
+    // 这里主动派发 resize，逼它们按新宽度重算一次 —— 只动事件，不动别人的代码。
+    try {
+      var kick = function () {
+        try { window.dispatchEvent(new Event('resize')) } catch (e) {}
+      }
+      setTimeout(kick, 120)
+      setTimeout(kick, 600)
+      setTimeout(kick, 1500)
+    } catch (eK) { /* 忽略 */ }
     try { setTimeout(function () { probeLayout('after-open') }, 700) } catch (e) { /* 忽略 */ }
     return true
   } catch (e) {

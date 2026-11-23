@@ -515,6 +515,29 @@ function CiteTabTitle(props) {
 // ── 客户端 PDF 渲染（pdfjs 画 canvas，命中段叠黄框）──
 var __pdfjs = null
 
+function citeChainDump() {
+  // 量「我们的容器 → 右栏容器 → ... → body」每一层的实际高度：
+  // 只有看清哪一层是 auto，才知道该把约束加在哪。
+  try {
+    var el = document.querySelector('.dsh-wk-citetab')
+    var out = []
+    var n = 0
+    while (el && n < 10) {
+      out.push({
+        tag: el.tagName,
+        cls: String(el.className || '').slice(0, 40),
+        h: el.clientHeight,
+        sh: el.scrollHeight,
+        pos: window.getComputedStyle(el).position,
+        flex: window.getComputedStyle(el).flex,
+      })
+      el = el.parentElement
+      n++
+    }
+    logDiag('parent-chain', { chain: out, over: document.documentElement.scrollHeight - window.innerHeight })
+  } catch (e) {}
+}
+
 function CiteTabBody(props) {
   // 包一层 try/catch：这个组件在 DSH 的右侧栏里独立渲染，一旦抛错整块就是白屏，
   // 用户看不到任何线索。这里把异常降级成一段可见的错误文字。

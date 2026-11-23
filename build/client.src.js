@@ -2724,7 +2724,7 @@ function ReaderFrame(props) {
   if (props.needle) qs += '&q=' + encodeURIComponent(String(props.needle).slice(0, 200))
   return h('iframe', {
     className: 'dsh-ima-reader-frame',
-    src: '/weknora-reader/?' + qs,
+    src: API + '/reader?' + qs,
     title: name || '原件预览',
   })
 }

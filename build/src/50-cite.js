@@ -304,6 +304,17 @@ function CiteTabTitle(props) {
 var __pdfjs = null
 
 function CiteTabBody(props) {
+  // 包一层 try/catch：这个组件在 DSH 的右侧栏里独立渲染，一旦抛错整块就是白屏，
+  // 用户看不到任何线索。这里把异常降级成一段可见的错误文字。
+  try {
+    return h(CiteTabBodyInner, props)
+  } catch (e) {
+    return h('div', { className: 'dsh-ima-citetab' },
+      h('div', { className: 'dsh-ima-err' }, '打开原文出错：' + ((e && e.message) || String(e))))
+  }
+}
+
+function CiteTabBodyInner(props) {
   var p = citeTabParams(props)
   // 这条 tab 会被复用：同一个 kind 再 openTab 时 DSH 不一定重新挂载组件，
   // 所以 chunkId 必须是 state，并订阅「角标被点」事件来换内容 —— 否则用户点了新角标，
@@ -434,7 +445,25 @@ function CiteTabBody(props) {
 // 卡片里的角标点击（没有 ctx 时退回右侧栏 tab 的全局事件）
 
 
+
+// 前端异常上报：右侧栏白屏时，宿主侧的 ~/.dsh/dsh-weknora-diag.log 会留下堆栈，
+// 不用让用户开开发者工具。
+function installErrorReporter() {
+  if (typeof window === 'undefined' || window.__WK_ERR_BOUND__) return
+  window.__WK_ERR_BOUND__ = true
+  window.addEventListener('error', function (ev) {
+    try { logDiag('win-error', { message: String((ev && ev.message) || ''), src: String((ev && ev.filename) || ''), line: (ev && ev.lineno) || 0 }) } catch (e) {}
+  })
+  window.addEventListener('unhandledrejection', function (ev) {
+    try {
+      var r = ev && ev.reason
+      logDiag('unhandled', { message: String((r && r.message) || r || '') })
+    } catch (e) {}
+  })
+}
+
 function registerCiteTab(ctx) {
+  try { installErrorReporter() } catch (e) {}
   try {
     if (!ctx.sidebarRightTabs || !ctx.sidebarRight) {
       console.warn('[dsh-weknora] 没有 sidebarRight / sidebarRightTabs，角标只开面板')

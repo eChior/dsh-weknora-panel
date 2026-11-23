@@ -292,8 +292,23 @@ function probeLayout(tag) {
       list.push({ tag: el.tagName + (cls ? '.' + cls : ''), h: h })
     }
     list.sort(function (x, y) { return y.h - x.h })
+    // 记下 body 直接子元素的位置：上移时哪一层的 top 变了，一眼能看出来
+    var kids = []
+    try {
+      var ch = (bd && bd.children) || []
+      for (var j = 0; j < ch.length && j < 12; j++) {
+        var k = ch[j]
+        var kr = k.getBoundingClientRect()
+        var kc = ''
+        try { kc = String(k.className || '').slice(0, 36) } catch (e8) { kc = '' }
+        kids.push({ t: k.tagName + (kc ? '.' + kc : ''), top: Math.round(kr.top), h: Math.round(kr.height) })
+      }
+    } catch (e9) {}
     logDiag('layout', {
       tag: tag,
+      scrollY: window.scrollY || 0,
+      bodyTop: bd ? Math.round(bd.getBoundingClientRect().top) : 0,
+      kids: kids,
       docScrollH: de ? de.scrollHeight : 0,
       bodyScrollH: bd ? bd.scrollHeight : 0,
       bodyOffsetH: bd ? bd.offsetHeight : 0,
@@ -424,6 +439,7 @@ function ensureCiteTabType(ctx) {
 }
 
 function openCiteInSidebar(ctx, detail) {
+  try { probeLayout('before-open') } catch (eB) {}
   try { ensureCiteTabType(ctx) } catch (e0) {}
   try {
     if (!ctx || !ctx.sidebarRight || typeof ctx.sidebarRight.openTab !== 'function') return false

@@ -21,7 +21,7 @@ function apply(ctx) {
   injectCss()
   console.log('[dsh-weknora] 浏览器半初始化，预览引擎:', window.__DSH_WK_VIEWER__ ? '已加载' : '缺失')
 
-  registerCiteOverlay(ctx)
+  registerCiteTab(ctx)
   bindCiteLinks(ctx)
   observeCiteMarks()
   // 工具卡片不再接管（registerLiveView）：DSH 默认渲染在 result 阶段认的是

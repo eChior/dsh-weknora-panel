@@ -2281,7 +2281,15 @@ function openCiteInSidebar(ctx, detail) {
 function citeTabParams(props) {
   // 1) 刚刚点过角标：直接用内存里那份（最可靠，绕开 DSH 各版本 params 传递差异）
   if (PENDING_CITE && PENDING_CITE.chunkId) return PENDING_CITE
-  // 2) 兜底：从 tab 的 navigation snapshot 里取（刷新后恢复 tab 时用得到）
+  // 2) 内存丢了（tab 在另一个渲染周期被重建、插件被热重载过）就读上次点击落下的那份
+  try {
+    var last = window.sessionStorage.getItem('dsh-weknora:last-cite')
+    if (last) {
+      var parsed = JSON.parse(last)
+      if (parsed && parsed.chunkId) return parsed
+    }
+  } catch (e) { /* 忽略 */ }
+  // 3) 兜底：从 tab 的 navigation snapshot 里取（刷新后恢复 tab 时用得到）
   try {
     var info = props && props.useTabInfo ? props.useTabInfo() : null
     var tab = info && info.tab
@@ -2771,8 +2779,22 @@ function ReaderFrame(props) {
 
 function CiteTabBody(props) {
   var p = citeTabParams(props)
-  var chunkId = p.chunkId || ''
-  var st = React.useState({ loading: true, error: '', doc: p.doc || '', items: [], focusId: chunkId })
+  // 这条 tab 会被复用：同一个 kind 再 openTab 时 DSH 不一定重新挂载组件，
+  // 所以 chunkId 必须是 state，并订阅「角标被点」事件来换内容 —— 否则用户点了新角标，
+  // 组件还端着第一次挂载时那份空参数，一直显示「没有传到 chunk id」。
+  var cidSt = React.useState(p.chunkId || '')
+  var chunkId = cidSt[0], setChunkId = cidSt[1]
+  var docSt = React.useState(doc || '')
+  var doc = docSt[0], setDoc = docSt[1]
+  React.useEffect(function () {
+    function onOpen(ev) {
+      var d = ev && ev.detail
+      if (d && d.chunkId) { setChunkId(String(d.chunkId)); setDoc(String(d.doc || '')) }
+    }
+    window.addEventListener('dsh-weknora:open-cite', onOpen)
+    return function () { window.removeEventListener('dsh-weknora:open-cite', onOpen) }
+  }, [])
+  var st = React.useState({ loading: true, error: '', doc: doc, items: [], focusId: chunkId })
   var s = st[0], setS = st[1]
   // 侧边栏默认就用 PDF 原件（LibreOffice 转出来的排版），需要复制文字时才切「看文本」
   var ob = React.useState(true); var officeOn = ob[0], setOfficeOn = ob[1]
@@ -2782,8 +2804,8 @@ function CiteTabBody(props) {
 
   React.useEffect(function () {
     var alive = true
-    if (!chunkId) { setS({ loading: false, error: '没有传到 chunk id', doc: p.doc || '', items: [], focusId: '' }); return function () {} }
-    setS({ loading: true, error: '', doc: p.doc || '', items: [], focusId: chunkId })
+    if (!chunkId) { setS({ loading: false, error: '没有传到 chunk id', doc: doc || '', items: [], focusId: '' }); return function () {} }
+    setS({ loading: true, error: '', doc: doc || '', items: [], focusId: chunkId })
     api('/chunk?id=' + encodeURIComponent(chunkId)).then(function (r) {
       if (!alive) return null
       if (!r || !r.ok) throw new Error((r && r.message) || '取不到这段原文')
@@ -2796,7 +2818,7 @@ function CiteTabBody(props) {
         setS({
           loading: false,
           error: '',
-          doc: p.doc || (t && t.title) || '',
+          doc: doc || (t && t.title) || '',
           items: items,
           focusId: chunkId,
           knowledgeId: kid,
@@ -2804,7 +2826,7 @@ function CiteTabBody(props) {
         })
       })
     }).catch(function (e) {
-      if (alive) setS({ loading: false, error: msg(e), doc: p.doc || '', items: [], focusId: chunkId })
+      if (alive) setS({ loading: false, error: msg(e), doc: doc || '', items: [], focusId: chunkId })
     })
     return function () { alive = false }
   }, [chunkId])
@@ -3083,6 +3105,8 @@ exports.__dev = {
   SetupDialog: SetupDialog,
   bindCiteLinks: bindCiteLinks,
   decorateCiteMarks: decorateCiteMarks, ReaderFrame: ReaderFrame,
+  citeTabParams: citeTabParams, openCiteDetail: openCiteDetail,
+  CiteTabBody: CiteTabBody, openCiteInSidebar: openCiteInSidebar,
   setLedger: function (cites) { CITE_LEDGER = { cites: cites || [], at: Date.now() } },
   css: CSS,
 }

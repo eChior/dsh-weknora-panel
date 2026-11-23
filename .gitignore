@@ -5,3 +5,6 @@ test/bundle.js
 test/pdfbundle.js
 *.log
 .DS_Store
+
+# 4.8MB pdf.js 阅读器（paper-reader 的 reader 页面），当前未接入，留在本地备用
+reader/

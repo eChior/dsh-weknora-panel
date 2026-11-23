@@ -185,7 +185,7 @@ function PdfView(props) {
       var h = Math.round(width * ratio)
       for (var i = 0; i < s.num; i++) {
         var w = document.createElement('div')
-        w.className = 'dsh-ima-pdfpage'
+        w.className = 'dsh-wk-pdfpage'
         w.style.width = width + 'px'
         w.style.height = h + 'px'
         w.setAttribute('data-page', String(i + 1))
@@ -241,7 +241,7 @@ function PdfView(props) {
           var dpr = Math.min(1.5, window.devicePixelRatio || 1)
           wrap.style.height = Math.floor(viewport.height) + 'px'
           var canvas = document.createElement('canvas')
-          canvas.className = 'dsh-ima-pdfcanvas'
+          canvas.className = 'dsh-wk-pdfcanvas'
           canvas.width = Math.floor(viewport.width * dpr)
           canvas.height = Math.floor(viewport.height * dpr)
           canvas.style.width = Math.floor(viewport.width) + 'px'
@@ -265,7 +265,7 @@ function PdfView(props) {
               })
             }
             var textDiv = document.createElement("div")
-            textDiv.className = "dsh-ima-tl"
+            textDiv.className = "dsh-wk-tl"
             wrap.style.setProperty("--scale-factor", String(viewport.scale))
             wrap.appendChild(textDiv)
             var tl = new pdfjs.TextLayer({
@@ -346,7 +346,7 @@ function PdfView(props) {
         if (!(hgt > 0)) hgt = Math.hypot(tx[2], tx[3]) || 12
         var w = Math.max(8, (sp.item.width || 0) * viewport.scale)
         var mark = document.createElement('div')
-        mark.className = 'dsh-ima-pdfhl'
+        mark.className = 'dsh-wk-pdfhl'
         mark.style.left = tx[4] + 'px'
         mark.style.top = (tx[5] - hgt) + 'px'
         mark.style.width = w + 'px'
@@ -412,7 +412,7 @@ function PdfView(props) {
               }
               seen.push(r)
               var mark = document.createElement("div")
-              mark.className = "dsh-ima-pdfhl"
+              mark.className = "dsh-wk-pdfhl"
               mark.style.left = ((r.left - pageBox.left) / pageBox.width * 100) + "%"
               mark.style.top = ((r.top - pageBox.top) / pageBox.height * 100) + "%"
               mark.style.width = (r.width / pageBox.width * 100) + "%"
@@ -461,13 +461,13 @@ function PdfView(props) {
       return next
     })
   }
-  return h('div', { className: 'dsh-ima-pdf' },
-    h('div', { className: 'dsh-ima-pdfbar' },
-      h('button', { className: 'dsh-ima-zbtn', title: '缩小', onClick: function () { stepZoom(-0.15) } }, '−'),
-      h('button', { className: 'dsh-ima-zbtn dsh-ima-zbtn-w', title: '点击恢复适应宽度', onClick: function () { setZoom(0) } }, zoom > 0 ? Math.round(zoom * 100) + '%' : '适应宽度'),
-      h('button', { className: 'dsh-ima-zbtn', title: '放大', onClick: function () { stepZoom(0.15) } }, '＋')),
-    s.error ? h('div', { className: 'dsh-ima-err' }, s.error) : null,
-    s.loading ? h('div', { className: 'dsh-ima-note' }, '正在打开原件…') : null,
-    h('div', { className: 'dsh-ima-pdfbox', ref: holder }),
-    s.num ? h('div', { className: 'dsh-ima-pdfno dsh-ima-pdfno-float' }, s.cur + ' / ' + s.num) : null)
+  return h('div', { className: 'dsh-wk-pdf' },
+    h('div', { className: 'dsh-wk-pdfbar' },
+      h('button', { className: 'dsh-wk-zbtn', title: '缩小', onClick: function () { stepZoom(-0.15) } }, '−'),
+      h('button', { className: 'dsh-wk-zbtn dsh-wk-zbtn-w', title: '点击恢复适应宽度', onClick: function () { setZoom(0) } }, zoom > 0 ? Math.round(zoom * 100) + '%' : '适应宽度'),
+      h('button', { className: 'dsh-wk-zbtn', title: '放大', onClick: function () { stepZoom(0.15) } }, '＋')),
+    s.error ? h('div', { className: 'dsh-wk-err' }, s.error) : null,
+    s.loading ? h('div', { className: 'dsh-wk-note' }, '正在打开原件…') : null,
+    h('div', { className: 'dsh-wk-pdfbox', ref: holder }),
+    s.num ? h('div', { className: 'dsh-wk-pdfno dsh-wk-pdfno-float' }, s.cur + ' / ' + s.num) : null)
 }

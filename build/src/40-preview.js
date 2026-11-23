@@ -43,26 +43,26 @@ function ViewerBox(props) {
     var ext = String(props.fileName || '').split('.').pop().toLowerCase()
     if (ext === 'pdf') {
       return h('iframe', {
-        className: 'dsh-ima-frame',
+        className: 'dsh-wk-frame',
         src: props.source,
         title: props.fileName,
         style: { flex: 1, minHeight: '60vh', width: '100%', border: 'none' },
       })
     }
     if (/^(png|jpe?g|gif|webp|bmp|svg|avif|ico)$/.test(ext)) {
-      return h('img', { className: 'dsh-ima-media', src: props.source, alt: props.fileName })
+      return h('img', { className: 'dsh-wk-media', src: props.source, alt: props.fileName })
     }
     if (/^(mp4|webm|mov|m4v)$/.test(ext)) {
-      return h('video', { className: 'dsh-ima-media', src: props.source, controls: true })
+      return h('video', { className: 'dsh-wk-media', src: props.source, controls: true })
     }
     if (/^(mp3|wav|m4a|ogg|aac|flac)$/.test(ext)) {
-      return h('audio', { className: 'dsh-ima-media', src: props.source, controls: true })
+      return h('audio', { className: 'dsh-wk-media', src: props.source, controls: true })
     }
-    return h('div', { className: 'dsh-ima-note', style: { marginTop: '12px' } },
+    return h('div', { className: 'dsh-wk-note', style: { marginTop: '12px' } },
       '这个格式没法内联预览，点右上角「下载原件」拿原文件。')
   }
 
-  return h('div', { ref: ref, className: 'dsh-ima-vbox', style: { flex: 1, minHeight: '60vh' } })
+  return h('div', { ref: ref, className: 'dsh-wk-vbox', style: { flex: 1, minHeight: '60vh' } })
 }
 
 // ── 侧边栏入口（⚠️ 只返回图标） ──────────────────────────
@@ -82,15 +82,15 @@ class PanelBoundary extends React.Component {
   }
   render() {
     if (this.state.err) {
-      return h('div', { className: 'dsh-ima-root' },
-        h('div', { className: 'dsh-ima-head' }, h('span', { className: 'dsh-ima-title' }, '知识库 WeKnora')),
-        h('div', { className: 'dsh-ima-main' },
-          h('div', { className: 'dsh-ima-err' },
+      return h('div', { className: 'dsh-wk-root' },
+        h('div', { className: 'dsh-wk-head' }, h('span', { className: 'dsh-wk-title' }, '知识库 WeKnora')),
+        h('div', { className: 'dsh-wk-main' },
+          h('div', { className: 'dsh-wk-err' },
             '界面出了点问题：' + String((this.state.err && this.state.err.message) || this.state.err)),
-          h('div', { className: 'dsh-ima-note', style: { marginTop: '10px' } },
+          h('div', { className: 'dsh-wk-note', style: { marginTop: '10px' } },
             '可以点下面的按钮重试；如果反复出现，重启 DSH 再看看。'),
           h('button', {
-            className: 'dsh-ima-btn dsh-ima-btn-p', style: { marginTop: '14px' },
+            className: 'dsh-wk-btn dsh-wk-btn-p', style: { marginTop: '14px' },
             onClick: function () { this.setState({ err: null }) }.bind(this),
           }, '重试'),
         ),
@@ -108,10 +108,10 @@ var STATUS_TEXT = {
 function StatusTag(props) {
   var s = props.status
   if (!s) return null
-  var cls = 'dsh-ima-tag '
-  if (s === 'completed') cls += 'dsh-ima-tag-s'
-  else if (s === 'failed') cls += 'dsh-ima-tag-e'
-  else cls += 'dsh-ima-tag-m'
+  var cls = 'dsh-wk-tag '
+  if (s === 'completed') cls += 'dsh-wk-tag-s'
+  else if (s === 'failed') cls += 'dsh-wk-tag-e'
+  else cls += 'dsh-wk-tag-m'
   return h('span', { className: cls, title: props.title || s }, STATUS_TEXT[s] || s)
 }
 

@@ -55,7 +55,7 @@ async function downloadOriginal(id, name) {
 function toast(msg) {
   try {
     var el = document.createElement('div')
-    el.className = 'dsh-ima-toast'
+    el.className = 'dsh-wk-toast'
     el.textContent = msg
     document.body.appendChild(el)
     setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el) }, 1800)

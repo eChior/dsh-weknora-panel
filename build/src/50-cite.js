@@ -172,7 +172,7 @@ function decorateOneRoot(root) {
         var doc = ''
         if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)))
         a = document.createElement('a')
-        a.className = 'dsh-ima-cite dsh-ima-cite-dom'
+        a.className = 'dsh-wk-cite dsh-wk-cite-dom'
         a.setAttribute('href', 'dsh-weknora:c/' + short)
         a.setAttribute('title', (doc ? doc + ' · ' : '') + '第 ' + seq + ' 处出处')
         a.setAttribute('data-wk-cite', short)
@@ -337,17 +337,17 @@ function CiteOverlay() {
   }, [])
   if (!CITE_OVL.visible || !CITE_OVL.chunkId) return null
   return h('div', {
-    className: 'dsh-ima-ovl',
+    className: 'dsh-wk-ovl',
     onClick: function (e) { if (e.target === e.currentTarget) citeOvlSet({ visible: false }) }
   },
-    h('div', { className: 'dsh-ima-ovl-card' },
-      h('div', { className: 'dsh-ima-ovl-h' },
-        h('span', { className: 'dsh-ima-ovl-t', title: CITE_OVL.doc }, CITE_OVL.doc || '原文'),
+    h('div', { className: 'dsh-wk-ovl-card' },
+      h('div', { className: 'dsh-wk-ovl-h' },
+        h('span', { className: 'dsh-wk-ovl-t', title: CITE_OVL.doc }, CITE_OVL.doc || '原文'),
         h('button', {
-          className: 'dsh-ima-x',
+          className: 'dsh-wk-x',
           onClick: function () { citeOvlSet({ visible: false }) }
         }, '✕')),
-      h('div', { className: 'dsh-ima-ovl-b' },
+      h('div', { className: 'dsh-wk-ovl-b' },
         h(CiteTabBodyInner, { chunkId: CITE_OVL.chunkId, doc: CITE_OVL.doc }))))
 }
 
@@ -487,8 +487,8 @@ function CiteTabBody(props) {
   try {
     return h(CiteTabBodyInner, props)
   } catch (e) {
-    return h('div', { className: 'dsh-ima-citetab' },
-      h('div', { className: 'dsh-ima-err' }, '打开原文出错：' + ((e && e.message) || String(e))))
+    return h('div', { className: 'dsh-wk-citetab' },
+      h('div', { className: 'dsh-wk-err' }, '打开原文出错：' + ((e && e.message) || String(e))))
   }
 }
 
@@ -548,7 +548,7 @@ function CiteTabBodyInner(props) {
 
   React.useEffect(function () {
     if (s.loading) return
-    var box = document.querySelector('.dsh-ima-citetab .dsh-ima-hl')
+    var box = document.querySelector('.dsh-wk-citetab .dsh-wk-hl')
     if (box && box.scrollIntoView) {
       try { box.scrollIntoView({ block: 'center' }) } catch (e) { /* 忽略 */ }
     }
@@ -566,18 +566,18 @@ function CiteTabBodyInner(props) {
     return function () { alive = false }
   }, [officeOn, s.knowledgeId, chunkId])
 
-  if (s.loading) return h('div', { className: 'dsh-ima-citetab' }, h('div', { className: 'dsh-ima-note' }, '正在取原文…'))
-  if (s.error) return h('div', { className: 'dsh-ima-citetab' }, h('div', { className: 'dsh-ima-err' }, s.error))
+  if (s.loading) return h('div', { className: 'dsh-wk-citetab' }, h('div', { className: 'dsh-wk-note' }, '正在取原文…'))
+  if (s.error) return h('div', { className: 'dsh-wk-citetab' }, h('div', { className: 'dsh-wk-err' }, s.error))
 
   var body = s.items.length
     ? s.items.map(function (c, i) {
       var hit = c.id === s.focusId
       return h('div', {
-        className: 'dsh-ima-chunk' + (hit ? ' dsh-ima-hl' : ''),
+        className: 'dsh-wk-chunk' + (hit ? ' dsh-wk-hl' : ''),
         key: c.id || ('p' + i),
       }, renderMarkdown(fixResourceUrls(c.content || '', s.kbId)))
     })
-    : h('div', { className: 'dsh-ima-note' }, '这篇没有分块正文')
+    : h('div', { className: 'dsh-wk-note' }, '这篇没有分块正文')
 
   var hitItem = null
   s.items.forEach(function (c) { if (c.id === s.focusId) hitItem = c })
@@ -586,35 +586,35 @@ function CiteTabBodyInner(props) {
 
   // 定位没成功时不传 needle：宁可不标黄，也不要停在第一页乱标一屏黄框
   var located = page > 0
-  return h('div', { className: 'dsh-ima-citetab' },
-    h('div', { className: 'dsh-ima-citetab-h' },
+  return h('div', { className: 'dsh-wk-citetab' },
+    h('div', { className: 'dsh-wk-citetab-h' },
       h(FileTypeIcon, { type: extOf(s.doc || '') }),
-      h('span', { className: 'dsh-ima-citetab-t', title: s.doc }, s.doc || '原文'),
-      h('span', { className: 'dsh-ima-spacer' }),
+      h('span', { className: 'dsh-wk-citetab-t', title: s.doc }, s.doc || '原文'),
+      h('span', { className: 'dsh-wk-spacer' }),
       s.knowledgeId && OFFICE_TYPES[extOf(s.doc || '')]
         ? h('button', {
-          className: 'dsh-ima-btn' + (officeOn ? ' dsh-ima-actbtn-on' : ''),
+          className: 'dsh-wk-btn' + (officeOn ? ' dsh-wk-actbtn-on' : ''),
           title: officeOn ? '切到分块文本（可复制）' : '用 LibreOffice 原件排版打开',
           onClick: function () { setOfficeOn(!officeOn) },
         }, officeOn ? '看文本' : '原件')
         : null,
-      h('span', { className: 'dsh-ima-badge' }, s.items.length + ' 段'),
+      h('span', { className: 'dsh-wk-badge' }, s.items.length + ' 段'),
       h('button', {
-        className: 'dsh-ima-x',
+        className: 'dsh-wk-x',
         title: '关闭原文（收起右侧栏）',
         onClick: function () { closeCiteTab() },
       }, '✕'),
     ),
     officeOn && s.knowledgeId
-      ? h('div', { className: 'dsh-ima-citetab-b dsh-ima-nos' },
+      ? h('div', { className: 'dsh-wk-citetab-b dsh-wk-nos' },
           !pageReady
-            ? h('div', { className: 'dsh-ima-note' }, '正在定位原文所在页…')
+            ? h('div', { className: 'dsh-wk-note' }, '正在定位原文所在页…')
             : h(PdfView, {
               id: s.knowledgeId,
               page: located ? page : 0,
               needle: located && hitItem ? String(hitItem.content || '') : '',
             }))
-      : h('div', { className: 'dsh-ima-citetab-b' }, body),
+      : h('div', { className: 'dsh-wk-citetab-b' }, body),
   )
 }
 

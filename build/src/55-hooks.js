@@ -170,7 +170,7 @@ function usePanelState() {
   // 命中段滚到视野中间
   React.useEffect(function () {
     if (!preview || !preview.focusId) return
-    var el = document.querySelector('.dsh-ima-main .dsh-ima-hl')
+    var el = document.querySelector('.dsh-wk-main .dsh-wk-hl')
     if (el && el.scrollIntoView) {
       try { el.scrollIntoView({ block: 'center' }) } catch (e2) { /* 老浏览器忽略 */ }
     }
@@ -282,25 +282,25 @@ function usePanelState() {
       // 和右侧栏用同一个 pdfjs 渲染器：连续滚动翻页，滚轮就是翻页。
       // 换成 iframe 会带上浏览器自带的「上一页/下一页」工具条，样式也不一致。
       if (previewIsSheet) {
-        previewBody = h('div', { className: 'dsh-ima-note dsh-ima-sheetnote' },
+        previewBody = h('div', { className: 'dsh-wk-note dsh-wk-sheetnote' },
           h('div', null, '表格文件不在面板里渲染（PDF 化会丢列宽，还不如 DSH 自己的表格预览）。'),
-          h('div', { className: 'dsh-ima-sheetrow' },
-            h('button', { className: 'dsh-ima-btn', onClick: function () { downloadOriginal(preview.file.id, preview.file.file_name || preview.file.title) } }, '下载原件'),
-            h('button', { className: 'dsh-ima-btn', onClick: function () { sendToConversation('请打开这个表格文件：' + (preview.file.title || preview.file.file_name || '')) } }, '交给对话')))
+          h('div', { className: 'dsh-wk-sheetrow' },
+            h('button', { className: 'dsh-wk-btn', onClick: function () { downloadOriginal(preview.file.id, preview.file.file_name || preview.file.title) } }, '下载原件'),
+            h('button', { className: 'dsh-wk-btn', onClick: function () { sendToConversation('请打开这个表格文件：' + (preview.file.title || preview.file.file_name || '')) } }, '交给对话')))
       } else if (previewIsOffice && officeOn) {
-        previewBody = h('div', { className: 'dsh-ima-nos' },
+        previewBody = h('div', { className: 'dsh-wk-nos' },
           h(PdfView, {
             id: preview.file.id,
             page: preview.page || 0,
             needle: preview.focusContent || '',
           }))
       } else {
-        previewBody = h('div', { className: 'dsh-ima-pre' },
+        previewBody = h('div', { className: 'dsh-wk-pre' },
           (preview.items && preview.items.length)
             ? preview.items.map(function (c, i) {
               var hit = preview.focusId && c.id === preview.focusId
               return h('div', {
-                className: 'dsh-ima-chunk' + (hit ? ' dsh-ima-hl' : ''),
+                className: 'dsh-wk-chunk' + (hit ? ' dsh-wk-hl' : ''),
                 key: c.id || ('p' + i),
               }, renderMarkdown(fixResourceUrls(c.content || '', preview.kbId || (curKb && curKb.id))))
             })
@@ -312,7 +312,7 @@ function usePanelState() {
         fileName: fileNameForFile(preview.file),
       })
     } else {
-      previewBody = h('div', { className: 'dsh-ima-note', style: { marginTop: '12px' } },
+      previewBody = h('div', { className: 'dsh-wk-note', style: { marginTop: '12px' } },
         '这个格式没法内联预览，点「下载原件」拿原文件。')
     }
   }

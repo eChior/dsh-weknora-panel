@@ -82,7 +82,7 @@ function renderMarkdown(src, opts) {
         ;(function (kv2, n2) {
           parts.push(h('button', {
             key: 'cite' + (key++),
-            className: 'dsh-ima-cite',
+            className: 'dsh-wk-cite',
             title: (kv2.doc ? '《' + kv2.doc + '》' : '出处') + ' · 点开看原文',
             onClick: function (e) {
               e.stopPropagation()
@@ -102,7 +102,7 @@ function renderMarkdown(src, opts) {
         var im = /^!\[([^\]]*)\]\(([^)\s]+)\)$/.exec(tok)
         parts.push(h('img', {
           key: 'img' + (key++),
-          className: 'dsh-ima-img',
+          className: 'dsh-wk-img',
           src: im ? im[2] : '',
           alt: (im && im[1]) || '图片',
           loading: 'lazy',
@@ -175,7 +175,7 @@ function renderMarkdown(src, opts) {
       out.push(h('blockquote', { key: 'q' + (key++) }, inline(m[1])))
     } else if (/^(发言人|说话人|说话者|Speaker)\s*\d{1,2}\s+\d{1,2}:\d{2}$/i.test(line.trim())) {
       flushList()
-      out.push(h('div', { key: 's' + (key++) }, h('span', { className: 'dsh-ima-spk' }, line.trim())))
+      out.push(h('div', { key: 's' + (key++) }, h('span', { className: 'dsh-wk-spk' }, line.trim())))
     } else if ((m = /^\s*[-*+]\s+(.*)$/.exec(line))) {
       // 真 Markdown 的项目符号（.md 类文件才有，展平后的笔记不会有）
       listBuf.push(m[1])
@@ -187,7 +187,7 @@ function renderMarkdown(src, opts) {
     }
   }
   flushList()
-  return h('div', { className: 'dsh-ima-md' }, out)
+  return h('div', { className: 'dsh-wk-md' }, out)
 }
 
 // ── 预览挂载器（真正用 open-file-viewer 渲染） ────────────

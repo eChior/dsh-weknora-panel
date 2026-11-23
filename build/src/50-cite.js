@@ -206,29 +206,11 @@ function startLayoutWatch() {
     if (window.__DSH_WK_LAYOUT_WATCH__) return
     window.__DSH_WK_LAYOUT_WATCH__ = true
     var n = 0
-    // 被动采集：任何让页面尺寸变化的操作（点 better-sidebar、开右栏、点角标）都留痕，
-    // 不需要专门为了测而点角标。节流 800ms，避免抖动刷屏。
-    try {
-      if (typeof ResizeObserver === 'function' && document.body) {
-        var lastH = 0
-        var lastAt = 0
-        var ro = new ResizeObserver(function () {
-          var now = Date.now()
-          var h = document.body.scrollHeight
-          if (h === lastH || now - lastAt < 800) return
-          lastH = h
-          lastAt = now
-          probeLayout('resize')
-        })
-        ro.observe(document.body)
-      }
-    } catch (eRo) { /* 忽略 */ }
-    // 只打开面板、不点角标也要能采到：窗口放宽到约 2 分钟
     var t = setInterval(function () {
       n += 1
       probeLayout('tick' + n)
-      if (n >= 30) clearInterval(t)
-    }, 4000)
+      if (n >= 12) clearInterval(t)
+    }, 5000)
   } catch (e) { /* 忽略 */ }
 }
 
@@ -339,74 +321,10 @@ function probeLayout(tag) {
         overX = { scrollW: de2.scrollWidth, innerW: window.innerWidth, wide: wide }
       }
     } catch (e6) {}
-    // 谁把页面撑到 933（视口才 912）——按 bottom 越界列出来，直接点名
-    var overY = null
-    try {
-      var deY = document.documentElement
-      var sh = deY ? deY.scrollHeight : 0
-      var ih = window.innerHeight || 0
-      if (sh > ih + 1) {
-        var tall = []
-        var allY = document.querySelectorAll('body *')
-        for (var y = 0; y < allY.length && tall.length < 10; y++) {
-          var ry = allY[y].getBoundingClientRect()
-          if (ry.bottom > ih + 1 && ry.height > 0) {
-            var yc = ''
-            try { yc = String(allY[y].className || '').slice(0, 44) } catch (eY) { yc = '' }
-            tall.push(allY[y].tagName + (yc ? '.' + yc : '') + ' top=' + Math.round(ry.top) + ' h=' + Math.round(ry.height) + ' bottom=' + Math.round(ry.bottom))
-          }
-        }
-        overY = { scrollH: sh, innerH: ih, tall: tall }
-      }
-    } catch (eZ) {}
-    // A/B 对照：临时把我们的右栏内容藏起来，看页面高度会不会回落到视口高。
-    // 回落 = 是我们的内容撑的；不回落 = 与插件无关（DSH 自身布局）。
-    var hideTest = null
-    try {
-      var dEl2 = document.documentElement
-      var b0 = dEl2.scrollHeight
-      var hs = document.querySelectorAll('.dsh-wk-citehost')
-      var sv = []
-      for (var hi = 0; hi < hs.length; hi++) { sv.push(hs[hi].style.display); hs[hi].style.display = 'none' }
-      var b1 = dEl2.scrollHeight
-      for (var hj = 0; hj < hs.length; hj++) hs[hj].style.display = sv[hj]
-      var hs2 = document.querySelectorAll('.dsh-wk-citetab')
-      var sv2 = []
-      for (var hk = 0; hk < hs2.length; hk++) { sv2.push(hs2[hk].style.display); hs2[hk].style.display = 'none' }
-      var b2 = dEl2.scrollHeight
-      for (var hl = 0; hl < hs2.length; hl++) hs2[hl].style.display = sv2[hl]
-      hideTest = { base: b0, noHost: b1, noTab: b2, hosts: hs.length, tabs: hs2.length }
-    } catch (eH) {}
-    // 逐个隐藏 body 的直接子元素，看谁一消失页面就回落到视口高 —— 直接点名元凶。
-    var bisect = null
-    try {
-      var deB = document.documentElement
-      var full = deB.scrollHeight
-      if (full > (window.innerHeight || 0) + 1) {
-        bisect = []
-        var kidsB = document.body.children
-        for (var bi = 0; bi < kidsB.length; bi++) {
-          var kb = kidsB[bi]
-          if (!kb || kb.tagName === 'SCRIPT') continue
-          var prev = kb.style.display
-          kb.style.display = 'none'
-          var h2b = deB.scrollHeight
-          kb.style.display = prev
-          if (full - h2b > 0) {
-            var bc = ''
-            try { bc = String(kb.className || '').slice(0, 44) } catch (eC) { bc = '' }
-            bisect.push({ el: kb.tagName + (bc ? '.' + bc : ''), freed: full - h2b })
-          }
-        }
-      }
-    } catch (eB2) {}
     logDiag('layout', {
       tag: tag,
-      bisect: bisect,
-      hideTest: hideTest,
       scrollY: window.scrollY || 0,
       overX: overX,
-      overY: overY,
       bodyTop: bd ? Math.round(bd.getBoundingClientRect().top) : 0,
       kids: kids,
       docScrollH: de ? de.scrollHeight : 0,
@@ -555,17 +473,6 @@ function openCiteInSidebar(ctx, detail) {
     // params 用「恒定值」：contentId = pageAddress(kind, params)，恒定的 params 让同一个
     // kind 永远复用同一个 tab（不会每点一次多开一个），内容仍由 PENDING_CITE 推给 tab 自己更新。
     ctx.sidebarRight.openTab(CITE_TAB_KIND, { params: { mode: 'cite' }, revealIfOpened: true })
-    // 打开右侧栏会改变主区宽度，DSH 侧有些容器（如 better-sidebar 的底部面板）
-    // 打开后没有重算，页面就一直多出 21px、关掉右栏也回不去。
-    // 这里主动派发 resize，逼它们按新宽度重算一次 —— 只动事件，不动别人的代码。
-    try {
-      var kick = function () {
-        try { window.dispatchEvent(new Event('resize')) } catch (e) {}
-      }
-      setTimeout(kick, 120)
-      setTimeout(kick, 600)
-      setTimeout(kick, 1500)
-    } catch (eK) { /* 忽略 */ }
     try { setTimeout(function () { probeLayout('after-open') }, 700) } catch (e) { /* 忽略 */ }
     return true
   } catch (e) {

@@ -134,9 +134,6 @@ function fixResourceUrls(text, kbId) {
 function scrollParentOf(el) {
   var p = el && el.parentElement
   while (p && p.nodeType === 1) {
-    // body / documentElement 永远不算「容器」：一旦落到它们身上，
-    // 我们又变成在滚整页，正是要避免的那件事。
-    if (p === document.body || p === document.documentElement) return null
     var ov = ''
     try { ov = window.getComputedStyle(p).overflowY } catch (e) { ov = '' }
     if ((ov === 'auto' || ov === 'scroll') && p.scrollHeight > p.clientHeight + 1) return p

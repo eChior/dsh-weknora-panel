@@ -304,9 +304,27 @@ function probeLayout(tag) {
         kids.push({ t: k.tagName + (kc ? '.' + kc : ''), top: Math.round(kr.top), h: Math.round(kr.height) })
       }
     } catch (e9) {}
+    var overX = null
+    try {
+      var de2 = document.documentElement
+      if (de2 && (de2.scrollWidth || 0) > (window.innerWidth || 0) + 1) {
+        var wide = []
+        var all = document.querySelectorAll('body *')
+        for (var z = 0; z < all.length && wide.length < 6; z++) {
+          var q = all[z].getBoundingClientRect()
+          if (q.width > (window.innerWidth || 0) + 1) {
+            var qc = ''
+            try { qc = String(all[z].className || '').slice(0, 40) } catch (e7) { qc = '' }
+            wide.push(all[z].tagName + (qc ? '.' + qc : '') + ' w=' + Math.round(q.width))
+          }
+        }
+        overX = { scrollW: de2.scrollWidth, innerW: window.innerWidth, wide: wide }
+      }
+    } catch (e6) {}
     logDiag('layout', {
       tag: tag,
       scrollY: window.scrollY || 0,
+      overX: overX,
       bodyTop: bd ? Math.round(bd.getBoundingClientRect().top) : 0,
       kids: kids,
       docScrollH: de ? de.scrollHeight : 0,

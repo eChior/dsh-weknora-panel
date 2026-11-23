@@ -321,10 +321,31 @@ function probeLayout(tag) {
         overX = { scrollW: de2.scrollWidth, innerW: window.innerWidth, wide: wide }
       }
     } catch (e6) {}
+    // 谁把页面撑到 933（视口才 912）——按 bottom 越界列出来，直接点名
+    var overY = null
+    try {
+      var deY = document.documentElement
+      var sh = deY ? deY.scrollHeight : 0
+      var ih = window.innerHeight || 0
+      if (sh > ih + 1) {
+        var tall = []
+        var allY = document.querySelectorAll('body *')
+        for (var y = 0; y < allY.length && tall.length < 10; y++) {
+          var ry = allY[y].getBoundingClientRect()
+          if (ry.bottom > ih + 1 && ry.height > 0) {
+            var yc = ''
+            try { yc = String(allY[y].className || '').slice(0, 44) } catch (eY) { yc = '' }
+            tall.push(allY[y].tagName + (yc ? '.' + yc : '') + ' top=' + Math.round(ry.top) + ' h=' + Math.round(ry.height) + ' bottom=' + Math.round(ry.bottom))
+          }
+        }
+        overY = { scrollH: sh, innerH: ih, tall: tall }
+      }
+    } catch (eZ) {}
     logDiag('layout', {
       tag: tag,
       scrollY: window.scrollY || 0,
       overX: overX,
+      overY: overY,
       bodyTop: bd ? Math.round(bd.getBoundingClientRect().top) : 0,
       kids: kids,
       docScrollH: de ? de.scrollHeight : 0,

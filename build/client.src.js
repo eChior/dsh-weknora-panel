@@ -1612,9 +1612,8 @@ function WeKnoraPage(props) {
       // 换成 iframe 会带上浏览器自带的「上一页/下一页」工具条，样式也不一致。
       if (previewIsOffice && officeOn) {
         previewBody = h('div', { className: 'dsh-ima-nos' },
-          h(ReaderFrame, {
-            kbId: preview.file.knowledge_base_id || preview.file.kbId || '',
-            name: preview.file.title || preview.file.file_name || preview.file.id,
+          h(PdfView, {
+            id: preview.file.id,
             page: preview.page || 0,
             needle: preview.focusContent || '',
           }))
@@ -2764,7 +2763,6 @@ function PdfView(props) {
     s.num ? h('div', { className: 'dsh-ima-pdfno dsh-ima-pdfno-float' }, s.cur + ' / ' + s.num) : null)
 }
 
-// 原件预览：嵌 paper-reader 的阅读器页面（pdf.js 渲染 / 缩放 / 滚轮翻页 / 命中段高亮）
 function ReaderFrame(props) {
   var kbId = props.kbId || ''
   var name = props.name || ''
@@ -2895,9 +2893,8 @@ function CiteTabBody(props) {
       ? h('div', { className: 'dsh-ima-citetab-b dsh-ima-nos' },
           !pageReady
             ? h('div', { className: 'dsh-ima-note' }, '正在定位原文所在页…')
-            : h(ReaderFrame, {
-              kbId: s.kbId || '',
-              name: s.doc || s.knowledgeId || '',
+            : h(PdfView, {
+              id: s.knowledgeId,
               page: located ? page : 0,
               needle: located && hitItem ? String(hitItem.content || '') : '',
             }))
@@ -3105,7 +3102,7 @@ exports.__dev = {
   WeKnoraPage: WeKnoraPage,
   SetupDialog: SetupDialog,
   bindCiteLinks: bindCiteLinks,
-  decorateCiteMarks: decorateCiteMarks, ReaderFrame: ReaderFrame,
+  decorateCiteMarks: decorateCiteMarks,
   citeTabParams: citeTabParams, openCiteDetail: openCiteDetail,
   CiteTabBody: CiteTabBody, openCiteInSidebar: openCiteInSidebar,
   setLedger: function (cites) { CITE_LEDGER = { cites: cites || [], at: Date.now() } },

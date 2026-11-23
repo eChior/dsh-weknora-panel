@@ -1897,6 +1897,7 @@ function SetupDialog(props) {
   var es = React.useState(''); var err = es[0], setErr = es[1]
   var ms = React.useState(''); var note = ms[0], setNote = ms[1]
   var cms = React.useState(s.contextMode || 'once'); var contextMode = cms[0], setContextMode = cms[1]
+  var das = React.useState(!!s.directAnswer); var directAnswer = das[0], setDirectAnswer = das[1]
   var rts = React.useState(''); var rtText = rts[0], setRtText = rts[1]
   var rto = React.useState(null); var rtOut = rto[0], setRtOut = rto[1]
   var rtb = React.useState(false); var rtBusy = rtb[0], setRtBusy = rtb[1]
@@ -1915,6 +1916,7 @@ function SetupDialog(props) {
 
   React.useEffect(function () {
     if (s.contextMode) setContextMode(s.contextMode)
+    setDirectAnswer(!!s.directAnswer)
   }, [s.contextMode])
 
   var save = function () {
@@ -1927,7 +1929,7 @@ function SetupDialog(props) {
     api('/config', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ baseUrl: b, apiKey: k, contextMode: contextMode }),
+      body: JSON.stringify({ baseUrl: b, apiKey: k, contextMode: contextMode, directAnswer: directAnswer }),
     }).then(function (r) {
       if (!r || !r.ok) { setErr((r && r.message) || '保存失败'); return }
       setApiKey('')
@@ -1984,6 +1986,18 @@ function SetupDialog(props) {
     ),
     h('div', { className: 'dsh-ima-note', style: { marginTop: '4px', fontSize: '.85em' } },
       '这段说明只影响 agent 会不会被提醒“优先用 weknora_panel_ask”，不影响 7 个工具本身。'),
+
+    h('label', { className: 'dsh-ima-lbl', style: { marginTop: '10px' } }, '快答直出'),
+    h('label', { style: { display: 'flex', gap: '6px', alignItems: 'flex-start', fontSize: '.9em', lineHeight: 1.5 } },
+      h('input', {
+        type: 'checkbox',
+        checked: !!directAnswer,
+        onChange: function (e) { setDirectAnswer(e.target.checked) },
+        style: { marginTop: '3px' },
+      }),
+      h('span', null, '本会话第一次提问时，WeKnora 的答案直接作为回复（不让模型再复述一遍）。'
+        + '关掉时模型会照常输出一次，正文里有完整答案，但会多几秒、也可能被轻微改写。')
+    ),
 
     h('div', { style: { borderTop: '1px solid rgba(0,0,0,.08)', marginTop: '12px', paddingTop: '10px' } },
       h('label', { className: 'dsh-ima-lbl' }, '脱敏自检'),

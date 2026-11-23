@@ -2174,8 +2174,9 @@ function decorateOneRoot(root, map) {
   var node
   while ((node = walker.nextNode())) {
     var txt = node.nodeValue
-    if (!txt || txt.indexOf('[') < 0) continue
-    if (!/\[\d{1,2}\]/.test(txt)) continue
+    if (!txt || (txt.indexOf('[') < 0 && txt.indexOf('【') < 0)) continue
+    // 模型常把 [1] 写成全角【1】，两种都要认
+    if (!/[\[【]\d{1,2}[\]】]/.test(txt)) continue
     if (decorateSkip(node)) continue
     nodes.push(node)
   }
@@ -2183,7 +2184,7 @@ function decorateOneRoot(root, map) {
   for (var j = 0; j < nodes.length; j++) {
     var src = nodes[j]
     var text = src.nodeValue
-    var re = /\[(\d{1,2})\]/g
+    var re = /[\[【](\d{1,2})[\]】]/g
     var frag = document.createDocumentFragment()
     var last = 0
     var m

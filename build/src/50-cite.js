@@ -597,17 +597,10 @@ function registerCiteTab(ctx) {
     }, 'dsh-weknora: cite tab type')
     ctx.effect(function () {
       return ctx.slots.inject('sidebar.right.pane.tab', function () {
-        // 用 DSH 官方推荐的 slot inject 把参数注入组件（better-sidebar 同款写法），
-        // 不再依赖 props.useTabInfo —— tab.navigation 是快照 store，params 取不到。
-        return ctx.slots.register({
-          name: 'sidebar.right.pane.tab',
-          key: CITE_TAB_ID,
-          inject: function () {
-            var c = (PENDING_CITE && PENDING_CITE.chunkId) || ''
-            var d = (PENDING_CITE && PENDING_CITE.doc) || ''
-            return { chunkId: c, doc: d, at: PENDING_CITE && PENDING_CITE.at }
-          }
-        }, CiteTabBody)
+        // 注册体只带 name+key：与 better-sidebar 一致，避免额外字段触发注册校验失败
+        // （看过 DSH 的 bodiesFor：seat 未命中时会渲染「这类内容还没有可用的查看方式」）。
+        return ctx.slots.register({ name: 'sidebar.right.pane.tab', key: CITE_TAB_ID }, CiteTabBody)
+
       })
     }, 'dsh-weknora: cite tab body')
     ctx.effect(function () {

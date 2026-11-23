@@ -66,6 +66,5 @@ exports.__dev = {
   decorateCiteMarks: decorateCiteMarks,
   citeTabParams: citeTabParams, openCiteDetail: openCiteDetail,
   CiteTabBody: CiteTabBody, openCiteInSidebar: openCiteInSidebar,
-  setLedger: function (cites) { CITE_LEDGER = { cites: cites || [], at: Date.now() } },
   css: CSS,
 }

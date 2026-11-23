@@ -77,26 +77,6 @@ function bindCiteLinks(ctx) {
 // agent 转述 WeKnora 答案时，markdown 链接会被它简化掉；但 `[1]` 这种纯文本标记
 // 基本会原样保留。这里在 DOM 层把 `[1]` 换成 <a href="dsh-weknora:chunk/...">，
 // 复用 bindCiteLinks 的 capture 点击拦截，点一下就在右侧栏打开原文并标黄。
-var CITE_LEDGER = { cites: [], at: 0 }
-
-function fetchCiteLedger(key) {
-  return fetch(API + '/ledger' + (key ? '?k=' + encodeURIComponent(key) : ''), { headers: { accept: 'application/json' } })
-    .then(function (r) { return r.ok ? r.json() : null })
-    .then(function (j) {
-      if (j && j.ok && j.cites && j.cites.length) CITE_LEDGER = { cites: j.cites, at: Date.now() }
-      return CITE_LEDGER
-    })
-    .catch(function () { return CITE_LEDGER })
-}
-
-function citeLedgerMap() {
-  var m = {}
-  for (var i = 0; i < CITE_LEDGER.cites.length; i++) {
-    var c = CITE_LEDGER.cites[i]
-    if (c && c.n) m[Number(c.n)] = c
-  }
-  return m
-}
 
 function decorateSkip(node) {
   for (var el = node && node.parentElement; el; el = el.parentElement) {
@@ -140,16 +120,14 @@ function citeRoots() {
 
 function decorateCiteMarks() {
   var __n = _doDecorate()
-  if (__n > 0) { try { logDiag('decorate', { n: __n, ledger: (CITE_LEDGER && CITE_LEDGER.cites || []).length }) } catch (e) {} }
+  if (__n > 0) { try { logDiag('decorate', { n: __n }) } catch (e) {} }
   return __n
 }
 function _doDecorate() {
-  var map = citeLedgerMap()
-  if (!Object.keys(map).length) return 0
   var roots = citeRoots()
   if (!roots.length) return 0
   var total = 0
-  roots.forEach(function (root) { total += decorateOneRoot(root, map) })
+  roots.forEach(function (root) { total += decorateOneRoot(root) })
   return total
 }
 
@@ -157,9 +135,8 @@ function _doDecorate() {
 // 正文示例、代码里的 m[1]、思考过程里的编号都会被误伤，
 // 之前把推理区里的 m[1] 染成蓝角标就是这么来的。
 var MARK_RE = /[\[【]#([0-9a-z]{6,12})[\]】]/g
-var CITE_SHORT = Object.create(null)
 
-function decorateOneRoot(root, map) {
+function decorateOneRoot(root) {
   var localSeq = { __n: 0 }
   var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null)
   var nodes = []
@@ -190,8 +167,7 @@ function decorateOneRoot(root, map) {
         // 显示编号按「本条消息内第几次出现」算，所以每条回答都从 1 开始。
         var seq = localSeq[short]
         if (!seq) { seq = (++localSeq.__n); localSeq[short] = seq }
-        var info = (CITE_SHORT && CITE_SHORT[short]) || null
-        var doc = info ? info.doc : ''
+        var doc = ''
         if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)))
         a = document.createElement('a')
         a.className = 'dsh-ima-cite dsh-ima-cite-dom'
@@ -241,7 +217,7 @@ function observeCiteMarks() {
     })
     mo.observe(document.body, { childList: true, subtree: true, characterData: true })
   } catch (e) { /* 忽略 */ }
-  fetchCiteLedger('').then(function () { try { decorateCiteMarks() } catch (e) { /* 忽略 */ } })
+  try { decorateCiteMarks() } catch (e) { /* 忽略 */ }
   setInterval(run, 4000)
 }
 

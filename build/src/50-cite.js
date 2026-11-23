@@ -5,11 +5,8 @@ function openCiteDetail(ctx, detail) {
   // 优先在右侧边栏开一个原文 tab；只有右侧栏打不开时才退回面板，
   // 否则点角标会顺带把左侧知识库面板切到那个文件，打扰正在看的东西。
   var opened = false
-  if (CITE_OVL_READY) {
-    try { openCiteOverlay(detail); opened = true } catch (e) { opened = false }
-  }
-  // 浮层没注册成功时退回右侧栏 tab，保证点击总有反应。
-  if (!opened) { try { opened = openCiteInSidebar(ctx, detail) } catch (e2) { opened = false } }
+  // 原文在右侧栏打开（用户要的是侧边栏，不是浮层）。
+  try { opened = openCiteInSidebar(ctx, detail) } catch (e) { opened = false }
   // 无论右侧栏有没有开，都通知面板：面板正在预览时，点下一个角标要跟着切文件 / 跳页。
   try { window.dispatchEvent(new CustomEvent('dsh-weknora:open-cite', { detail: detail })) } catch (e) { /* 忽略 */ }
   console.log('[dsh-weknora] 角标点击 →', opened ? '右侧栏原文' : '面板原文', detail.chunkId)

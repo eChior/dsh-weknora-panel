@@ -379,11 +379,14 @@ function openCiteInSidebar(ctx, detail) {
     // 不带 params：DSH 用 pageAddress(kind, params) 当 contentId，参数不同就会被当成另一个 tab，
     // 于是每点一次角标就多开一个（右侧栏高度叠一层、整页被顶高）。
     // 内容走 PENDING_CITE + 'dsh-weknora:open-cite' 事件，tab 自己更新。
-    ctx.sidebarRight.openTab(CITE_TAB_KIND, { revealIfOpened: true })
+    // params 用「恒定值」：contentId = pageAddress(kind, params)，恒定的 params 让同一个
+    // kind 永远复用同一个 tab（不会每点一次多开一个），内容仍由 PENDING_CITE 推给 tab 自己更新。
+    ctx.sidebarRight.openTab(CITE_TAB_KIND, { params: { mode: 'cite' }, revealIfOpened: true })
     try { setTimeout(function () { probeLayout('after-open') }, 700) } catch (e) { /* 忽略 */ }
     return true
   } catch (e) {
     console.warn('[dsh-weknora] 右侧栏打开失败，退回面板:', e && e.message)
+    try { logDiag('open-cite-fail', { msg: e && e.message, stack: e && e.stack }) } catch (e2) {}
     return false
   }
 }
@@ -599,19 +602,28 @@ function registerCiteTab(ctx) {
     // DSH 的 TabSlot 用 `entryKey = definition?.id ?? tab.kind` 找内容。
     // definition 没被 useTabTypes 命中时会退化成 kind，所以 id 与 kind 各注册一份，
     // 否则会落到 fallback：「这类内容还没有可用的查看方式」。
-    var keys = [CITE_TAB_ID, CITE_TAB_KIND]
-    keys.forEach(function (k) {
-      ctx.effect(function () {
-        return ctx.slots.inject('sidebar.right.pane.tab', function () {
-          return ctx.slots.register({ name: 'sidebar.right.pane.tab', key: k }, CiteTabBody)
-        })
-      }, 'dsh-weknora: cite tab body ' + k)
-      ctx.effect(function () {
-        return ctx.slots.inject('sidebar.right.pane.tab.title', function () {
-          return ctx.slots.register({ name: 'sidebar.right.pane.tab.title', key: k }, CiteTabTitle)
-        })
-      }, 'dsh-weknora: cite tab title ' + k)
-    })
+    // 每个注册各自 try：任何一个 slot 注册失败都不能让整个注册函数抛错，
+    // 否则 apply 半途中断，连角标装饰器都不会跑（表现为「角标点不开」）。
+    function regBody(k) {
+      try {
+        ctx.effect(function () {
+          return ctx.slots.inject('sidebar.right.pane.tab', function () {
+            return ctx.slots.register({ name: 'sidebar.right.pane.tab', key: k }, CiteTabBody)
+          })
+        }, 'dsh-weknora: cite tab body ' + k)
+      } catch (e) { console.warn('[dsh-weknora] body slot 注册失败 ' + k + ': ' + (e && e.message)) }
+    }
+    function regTitle(k) {
+      try {
+        ctx.effect(function () {
+          return ctx.slots.inject('sidebar.right.pane.tab.title', function () {
+            return ctx.slots.register({ name: 'sidebar.right.pane.tab.title', key: k }, CiteTabTitle)
+          })
+        }, 'dsh-weknora: cite tab title ' + k)
+      } catch (e) { console.warn('[dsh-weknora] title slot 注册失败 ' + k + ': ' + (e && e.message)) }
+    }
+    regBody(CITE_TAB_ID)
+    regTitle(CITE_TAB_ID)
   } catch (e) {
     console.warn('[dsh-weknora] 右侧栏原文 tab 注册失败，角标退回面板:', e && e.message)
     return false

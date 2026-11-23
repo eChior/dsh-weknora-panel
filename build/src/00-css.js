@@ -162,7 +162,7 @@ var CSS = [
   '.dsh-wk-hitsnip-h{display:block;font-weight:600;margin-bottom:2px;color:#8a6d1d}',
   '.dsh-wk-loading{display:flex;align-items:center;justify-content:center;color:#888;font-size:12px;border:1px dashed #ddd;border-radius:4px}',
   '.dsh-wk-pdfframe{flex:1 1 auto;width:100%;height:100%;min-height:0;border:0;background:#fff}',
-  '.dsh-wk-pdf{position:relative;display:flex;flex-direction:column;height:100%;min-height:0}',
+  '.dsh-wk-pdf{position:relative;display:flex;flex-direction:column;height:100%;min-height:420px}',
   '.dsh-wk-pdfbar{display:flex;align-items:center;gap:8px;padding:0 0 6px}',
   '.dsh-wk-pdfno{font-size:12px;color:#666}',
   '.dsh-wk-pdfno-float{position:absolute;right:12px;bottom:10px;z-index:3;padding:2px 8px;border-radius:10px;background:rgba(0,0,0,.5);color:#fff;font-size:11px;line-height:16px;pointer-events:none}',

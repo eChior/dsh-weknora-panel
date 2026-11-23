@@ -644,13 +644,10 @@ function CiteTabBodyInner(props) {
       ? h('div', { className: 'dsh-wk-citetab-b dsh-wk-nos' },
           !pageReady
             ? h('div', { className: 'dsh-wk-note' }, '正在定位原文所在页…')
-            : h('iframe', {
-              className: 'dsh-wk-pdfframe',
-              // 交给浏览器原生 PDF 渲染：缩放/翻页/文字选择都由它负责，
-              // 不再经过 pdfjs worker（那条路一旦 worker 起不来就是一片白）。
-              src: API + '/pdf?id=' + encodeURIComponent(s.knowledgeId)
-                + (located && page > 1 ? '#page=' + page : ''),
-              title: '原件预览',
+            : h(PdfView, {
+              id: s.knowledgeId,
+              page: located ? page : 0,
+              needle: located && hitItem ? String(hitItem.content || '') : '',
             }))
       : h('div', { className: 'dsh-wk-citetab-b' }, body),
   )

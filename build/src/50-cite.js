@@ -255,6 +255,35 @@ function closeCiteTab() {
  */
 var PENDING_CITE = null
 
+// 布局探针：点角标后量一次「谁把页面撑高了」，落宿主 diag 日志。
+// 用来定位「点得越多、界面越往上跑」这种累积性撑高，不参与任何功能逻辑。
+function probeLayout(tag) {
+  try {
+    var de = document.documentElement
+    var bd = document.body
+    var all = document.querySelectorAll('*')
+    var list = []
+    var n = Math.min(all.length, 8000)
+    for (var i = 0; i < n; i++) {
+      var el = all[i]
+      var h = el.offsetHeight || 0
+      if (h < 800) continue
+      var cls = ''
+      try { cls = String(el.className || '').slice(0, 48) } catch (e) { cls = '' }
+      list.push({ tag: el.tagName + (cls ? '.' + cls : ''), h: h })
+    }
+    list.sort(function (x, y) { return y.h - x.h })
+    logDiag('layout', {
+      tag: tag,
+      docScrollH: de ? de.scrollHeight : 0,
+      bodyScrollH: bd ? bd.scrollHeight : 0,
+      bodyOffsetH: bd ? bd.offsetHeight : 0,
+      innerH: window.innerHeight || 0,
+      tall: list.slice(0, 8)
+    })
+  } catch (e) { /* 探针失败不影响功能 */ }
+}
+
 function openCiteInSidebar(ctx, detail) {
   try {
     if (!ctx || !ctx.sidebarRight || typeof ctx.sidebarRight.openTab !== 'function') return false
@@ -265,6 +294,7 @@ function openCiteInSidebar(ctx, detail) {
     // revealIfOpened：同 kind 的 tab 已经开着就复用，不要每点一次角标就再开一个
     // （之前连续点不同角标会堆出好几个 tab，右侧栏高度被挤乱、整个会话区跟着错位）。
     ctx.sidebarRight.openTab(CITE_TAB_KIND, { params: { chunkId: detail.chunkId, doc: detail.doc || '' }, revealIfOpened: true })
+    try { setTimeout(function () { probeLayout('after-open') }, 700) } catch (e) { /* 忽略 */ }
     return true
   } catch (e) {
     console.warn('[dsh-weknora] 右侧栏打开失败，退回面板:', e && e.message)

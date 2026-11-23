@@ -1,9 +1,11 @@
-/** 面板的两个状态容器。
- *  useKbData：知识库/分组/文件/上传（纯数据，不关心界面）
- *  usePreview：预览与检索（依赖 useKbData 的当前库与刷新函数）
- *  拆出来只是让 WeKnoraPage 只剩渲染；数据流与行为未改。
+/** 面板的唯一状态容器。
+ *
+ *  本来按「数据 / 预览」拆成两个 hook，试过之后发现它们共享得太深：加载列表时要清预览、
+ *  检索要用当前库、上传后要按检索词刷新 —— 拆开只能靠层层传参或隐式全局，反而更难懂。
+ *  现在合成一个 usePanelState()，好处是 WeKnoraPage 仍然只做渲染，改动也只发生在这里。
  */
-function useKbData() {
+function usePanelState() {
+
   var st = React.useState(null); var status = st[0], setStatus = st[1]
   var ks = React.useState([]); var kbs = ks[0], setKbs = ks[1]
   var cs = React.useState(null); var curKb = cs[0], setCurKb = cs[1]
@@ -13,6 +15,7 @@ function useKbData() {
   var fds = React.useState([]); var folders = fds[0], setFolders = fds[1]
   var cfd = React.useState('__all__'); var curFolder = cfd[0], setCurFolder = cfd[1]
   var ups = React.useState([]); var uploads = ups[0], setUploads = ups[1]
+  var us = React.useState(null); var updatedAt = us[0], setUpdatedAt = us[1]
   var ags = React.useState([]); var agents = ags[0], setAgents = ags[1]
   var aid = React.useState('builtin-quick-answer'); var agentId = aid[0], setAgentId = aid[1]
   var fileRef = React.useRef(null)
@@ -148,41 +151,10 @@ function useKbData() {
     if (status && status.configured) loadKbs()
   }, [status && status.configured])
 
-  return {
-    status: status, kbs: kbs, curKb: curKb, items: items, loading: loading, error: error,
-    folders: folders, curFolder: curFolder, uploads: uploads, agents: agents, agentId: agentId, fileRef: fileRef,
-    setCurKb: setCurKb, setItems: setItems, setCurFolder: setCurFolder, setUploads: setUploads,
-    setLoading: setLoading, setError: setError, setKbs: setKbs, setFolders: setFolders,
-    msg: msg, PARSE_TEXT: PARSE_TEXT,
-    refreshStatus: refreshStatus, loadKbs: loadKbs, loadAgents: loadAgents,
-    loadFolders: loadFolders, loadFiles: loadFiles, patchUpload: patchUpload,
-    trackParse: trackParse, doUpload: doUpload,
-  }
-}
-
-function usePreview(kb) {
-  var curKb = kb.curKb
-  var loadFiles = kb.loadFiles
-  var msg = kb.msg
-  var setLoading = kb.setLoading
-  var setError = kb.setError
-  var status = kb.status
-  var refreshStatus = kb.refreshStatus
-  var loadFolders = kb.loadFolders
-  var error = kb.error
-  var loading = kb.loading
-  var setCurKb = kb.setCurKb
-  var setItems = kb.setItems
-  var setFolders = kb.setFolders
-  var setUploads = kb.setUploads
-  var PARSE_TEXT = kb.PARSE_TEXT
-  var patchUpload = kb.patchUpload
-  var trackParse = kb.trackParse
   var vs = React.useState(null); var preview = vs[0], setPreview = vs[1]
   var hs = React.useState([]); var hits = hs[0], setHits = hs[1]
   var qs = React.useState(''); var query = qs[0], setQuery = qs[1]
   var kws = React.useState(''); var keyword = kws[0], setKeyword = kws[1]
-  var us = React.useState(null); var updatedAt = us[0], setUpdatedAt = us[1]
   var ss = React.useState(false); var showSetup = ss[0], setShowSetup = ss[1]
   var ds = React.useState(null); var detail = ds[0], setDetail = ds[1]
   var tb = React.useState('files'); var tab = tb[0], setTab = tb[1]
@@ -344,12 +316,22 @@ function usePreview(kb) {
         '这个格式没法内联预览，点「下载原件」拿原文件。')
     }
   }
+
   return {
-    preview: preview, hits: hits, query: query, keyword: keyword, updatedAt: updatedAt,
+    // 数据
+    status: status, kbs: kbs, curKb: curKb, items: items, loading: loading, error: error,
+    folders: folders, curFolder: curFolder, uploads: uploads, agents: agents, agentId: agentId, fileRef: fileRef,
+    updatedAt: updatedAt, setUpdatedAt: setUpdatedAt, msg: msg, PARSE_TEXT: PARSE_TEXT,
+    setCurKb: setCurKb, setItems: setItems, setCurFolder: setCurFolder, setUploads: setUploads,
+    setLoading: setLoading, setError: setError, setKbs: setKbs, setFolders: setFolders,
+    refreshStatus: refreshStatus, loadKbs: loadKbs, loadAgents: loadAgents,
+    loadFolders: loadFolders, loadFiles: loadFiles, patchUpload: patchUpload,
+    trackParse: trackParse, doUpload: doUpload,
+    // 预览与检索
+    preview: preview, hits: hits, query: query, keyword: keyword,
     showSetup: showSetup, detail: detail, tab: tab, officeOn: officeOn,
     setPreview: setPreview, setHits: setHits, setQuery: setQuery, setKeyword: setKeyword,
-    setUpdatedAt: setUpdatedAt, setShowSetup: setShowSetup, setDetail: setDetail,
-    setTab: setTab, setOfficeOn: setOfficeOn,
+    setShowSetup: setShowSetup, setDetail: setDetail, setTab: setTab, setOfficeOn: setOfficeOn,
     openFile: openFile, showCite: showCite, doSearch: doSearch,
     quoteFile: quoteFile, quoteHit: quoteHit, openInWeKnora: openInWeKnora,
     previewExt: previewExt, previewIsOffice: previewIsOffice,

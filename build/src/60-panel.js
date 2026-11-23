@@ -1,23 +1,25 @@
 function WeKnoraPage(props) {
   var panelActive = !props || props.active !== false
-  var kb = useKbData()
-  var pv = usePreview(kb)
+  var s = usePanelState()
 
-  var status = kb.status, kbs = kb.kbs, curKb = kb.curKb, items = kb.items
-  var loading = kb.loading, error = kb.error, folders = kb.folders, curFolder = kb.curFolder
-  var uploads = kb.uploads, agents = kb.agents, agentId = kb.agentId, fileRef = kb.fileRef
-  var refreshStatus = kb.refreshStatus, loadKbs = kb.loadKbs, loadFolders = kb.loadFolders
-  var loadFiles = kb.loadFiles, doUpload = kb.doUpload, PARSE_TEXT = kb.PARSE_TEXT
-  var setCurKb = kb.setCurKb, setCurFolder = kb.setCurFolder, setUploads = kb.setUploads
+  var status = s.status, kbs = s.kbs, curKb = s.curKb, items = s.items
+  var loading = s.loading, error = s.error, folders = s.folders, curFolder = s.curFolder
+  var uploads = s.uploads, agents = s.agents, agentId = s.agentId, fileRef = s.fileRef
+  var updatedAt = s.updatedAt, refreshStatus = s.refreshStatus, loadKbs = s.loadKbs
+  var loadFolders = s.loadFolders, loadFiles = s.loadFiles, doUpload = s.doUpload
+  var PARSE_TEXT = s.PARSE_TEXT, trackParse = s.trackParse
+  var setCurKb = s.setCurKb, setCurFolder = s.setCurFolder, setUploads = s.setUploads
+  var setLoading = s.setLoading, setError = s.setError
 
-  var preview = pv.preview, hits = pv.hits, query = pv.query, keyword = pv.keyword
-  var updatedAt = pv.updatedAt, showSetup = pv.showSetup, detail = pv.detail
-  var tab = pv.tab, officeOn = pv.officeOn, previewBody = pv.previewBody
-  var openFile = pv.openFile, showCite = pv.showCite, doSearch = pv.doSearch
-  var quoteFile = pv.quoteFile, quoteHit = pv.quoteHit, openInWeKnora = pv.openInWeKnora
-  var setPreview = pv.setPreview, setHits = pv.setHits, setQuery = pv.setQuery
-  var setKeyword = pv.setKeyword, setShowSetup = pv.setShowSetup, setDetail = pv.setDetail
-  var setTab = pv.setTab, setOfficeOn = pv.setOfficeOn
+  var preview = s.preview, hits = s.hits, query = s.query, keyword = s.keyword
+  var showSetup = s.showSetup, detail = s.detail, tab = s.tab, officeOn = s.officeOn
+  var previewBody = s.previewBody
+  var openFile = s.openFile, showCite = s.showCite, doSearch = s.doSearch
+  var quoteFile = s.quoteFile, quoteHit = s.quoteHit, openInWeKnora = s.openInWeKnora
+  var setPreview = s.setPreview, setHits = s.setHits, setQuery = s.setQuery
+  var setKeyword = s.setKeyword, setShowSetup = s.setShowSetup, setDetail = s.setDetail
+  var setTab = s.setTab, setOfficeOn = s.setOfficeOn
+
 
   // ── 未配置 ──
   if (!status || !status.configured) {
@@ -45,15 +47,17 @@ function WeKnoraPage(props) {
       h('span', { className: 'dsh-ima-badge' }, (kbs.length || 0) + ' 个库'),
       h('span', { className: 'dsh-ima-spacer' }),
       updatedAt ? h('span', { className: 'dsh-ima-stamp' }, '更新于 ' + fmtTime(updatedAt)) : null,
-      curKb ? h('button', {
-        className: 'dsh-ima-ibtn', title: '上传文件到当前分组',
-        onClick: function () { if (fileRef.current) fileRef.current.click() },
-      }, h('span', { style: { fontSize: '16px', lineHeight: 1 } }, '＋')) : null,
-      h('input', {
-        type: 'file', multiple: true, ref: fileRef,
-        style: { display: 'none' },
-        onChange: function (ev) { doUpload(ev.target.files); ev.target.value = '' },
-      }),
+      // 上传入口已按用户要求禁用（2026-11-23）。要恢复：把下面注释掉的两段放回来，
+      // 并把 useKbData 里的 doUpload/trackParse 一起启用即可（逻辑都在，只是不入口）。
+      // curKb ? h('button', {
+      //   className: 'dsh-ima-ibtn', title: '上传文件到当前分组',
+      //   onClick: function () { if (fileRef.current) fileRef.current.click() },
+      // }, h('span', { style: { fontSize: '16px', lineHeight: 1 } }, '＋')) : null,
+      // h('input', {
+      //   type: 'file', multiple: true, ref: fileRef,
+      //   style: { display: 'none' },
+      //   onChange: function (ev) { doUpload(ev.target.files); ev.target.value = '' },
+      // }),
       h('button', { className: 'dsh-ima-ibtn', onClick: function () { loadKbs() }, title: '重新获取知识库列表' }, h(RefreshIcon)),
       h('button', { className: 'dsh-ima-ibtn', onClick: function () { setShowSetup(!showSetup) }, title: '连接设置' }, h('span', { style: { fontSize: '15px' } }, '⚙')),
     ),

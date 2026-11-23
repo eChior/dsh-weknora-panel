@@ -44,7 +44,8 @@
     "README.md",
     "INSTALL.md",
     "NOTICE",
-    "config.example.json"
+    "config.example.json",
+    "reader"
   ],
   "scripts": {
     "build": "node build/build.mjs",

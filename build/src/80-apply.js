@@ -10,6 +10,7 @@ var applied = false
 /** 打开一条出处的原文（会写 sessionStorage，供面板回退路径补跳） */
 
 function apply(ctx) {
+  try { startLayoutWatch() } catch (e) { /* 忽略 */ }
   if (applied) {
     console.log('[dsh-weknora] apply 已执行过，跳过重复注册')
     return

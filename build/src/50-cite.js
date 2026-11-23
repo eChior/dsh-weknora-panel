@@ -196,6 +196,21 @@ function logDiag(evt, data) {
   } catch (e) { /* 忽略 */ }
 }
 
+// 启动后自动采样一轮（每 5 秒一次，共 12 次），不需要用户刻意操作，
+// 用来抓「点角标把页面越撑越高」的时间序列。
+function startLayoutWatch() {
+  try {
+    if (window.__DSH_WK_LAYOUT_WATCH__) return
+    window.__DSH_WK_LAYOUT_WATCH__ = true
+    var n = 0
+    var t = setInterval(function () {
+      n += 1
+      probeLayout('tick' + n)
+      if (n >= 12) clearInterval(t)
+    }, 5000)
+  } catch (e) { /* 忽略 */ }
+}
+
 function observeCiteMarks() {
   if (window.__DSH_WK_CITE_OBS__) return
   window.__DSH_WK_CITE_OBS__ = true

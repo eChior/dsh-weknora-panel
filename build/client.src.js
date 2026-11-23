@@ -2124,11 +2124,37 @@ function decorateSkip(node) {
   return false
 }
 
+// DSH 的消息区可能挂在 shadow root 里（插件样式都要往每个 shadowRoot 塞一份），
+// 所以装饰器不能只看 document.body，得把所有 shadow root 一起扫。
+function citeRoots() {
+  var out = []
+  var seen = []
+  var walk = function (root) {
+    if (!root || seen.indexOf(root) >= 0) return
+    seen.push(root)
+    out.push(root)
+    var els
+    try { els = root.querySelectorAll('*') } catch (e) { return }
+    for (var i = 0; i < els.length; i++) {
+      var sr = els[i] && els[i].shadowRoot
+      if (sr) walk(sr)
+    }
+  }
+  try { if (document.body) walk(document.body) } catch (e) { /* 忽略 */ }
+  return out
+}
+
 function decorateCiteMarks() {
   var map = citeLedgerMap()
   if (!Object.keys(map).length) return 0
-  var root = document.body
-  if (!root) return 0
+  var roots = citeRoots()
+  if (!roots.length) return 0
+  var total = 0
+  roots.forEach(function (root) { total += decorateOneRoot(root, map) })
+  return total
+}
+
+function decorateOneRoot(root, map) {
   var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null)
   var nodes = []
   var node

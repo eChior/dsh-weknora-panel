@@ -308,7 +308,10 @@ function openCiteInSidebar(ctx, detail) {
     }
     // revealIfOpened：同 kind 的 tab 已经开着就复用，不要每点一次角标就再开一个
     // （之前连续点不同角标会堆出好几个 tab，右侧栏高度被挤乱、整个会话区跟着错位）。
-    ctx.sidebarRight.openTab(CITE_TAB_KIND, { params: { chunkId: detail.chunkId, doc: detail.doc || '' }, revealIfOpened: true })
+    // 不带 params：DSH 用 pageAddress(kind, params) 当 contentId，参数不同就会被当成另一个 tab，
+    // 于是每点一次角标就多开一个（右侧栏高度叠一层、整页被顶高）。
+    // 内容走 PENDING_CITE + 'dsh-weknora:open-cite' 事件，tab 自己更新。
+    ctx.sidebarRight.openTab(CITE_TAB_KIND, { revealIfOpened: true })
     try { setTimeout(function () { probeLayout('after-open') }, 700) } catch (e) { /* 忽略 */ }
     return true
   } catch (e) {
@@ -366,7 +369,7 @@ function CiteTabBodyInner(props) {
   // 组件还端着第一次挂载时那份空参数，一直显示「没有传到 chunk id」。
   var cidSt = React.useState(p.chunkId || '')
   var chunkId = cidSt[0], setChunkId = cidSt[1]
-  var docSt = React.useState(doc || '')
+  var docSt = React.useState(p.doc || '')
   var doc = docSt[0], setDoc = docSt[1]
   React.useEffect(function () {
     function onOpen(ev) {

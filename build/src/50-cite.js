@@ -368,7 +368,63 @@ function registerCiteOverlay(ctx) {
   }
 }
 
+// ── 右侧栏 tab 类型注册 ─────────────────────────────────────────────
+// SidebarRightTabRegistry.register() 的副作用写在它自己所属插件（ui-sidebar-right）的
+// ctx.effect 里，跨插件调用时不会执行，所以只调 register() 不会让 placeTab 找得到类型。
+// 另外 sidebarRightTabs 不一定是注入服务名，controller 上也挂着同一份 registry（controller.tabs）。
+// 这里两头都试，并把类型直接写进 kinds/ids（不走 ctx.effect），点击前也再兜一次。
+var citeTabTypeDispose = null
+
+function citeTabsOf(ctx) {
+  if (!ctx) return null
+  try { if (ctx.sidebarRightTabs) return ctx.sidebarRightTabs } catch (e) {}
+  try { if (ctx.sidebarRight && ctx.sidebarRight.tabs) return ctx.sidebarRight.tabs } catch (e) {}
+  return null
+}
+
+function ensureCiteTabType(ctx) {
+  var reg = citeTabsOf(ctx)
+  if (!reg) {
+    try { logDiag('cite-tab-no-registry', { hasRight: !!(ctx && ctx.sidebarRight) }) } catch (e) {}
+    return false
+  }
+  var definition = {
+    id: CITE_TAB_ID,
+    kind: CITE_TAB_KIND,
+    priority: 'extension',
+    title: function () { return '知识库原文' },
+  }
+  try {
+    if (!citeTabTypeDispose && typeof reg.register === 'function') citeTabTypeDispose = reg.register(definition)
+  } catch (eReg) {
+    var m = String((eReg && eReg.message) || '')
+    if (m.indexOf('already registered') < 0) {
+      try { logDiag('register-cite-tab-type-fail', { msg: m }) } catch (e) {}
+    }
+  }
+  try {
+    var has = !!(reg.kinds && typeof reg.kinds.get === 'function' && reg.kinds.get(CITE_TAB_KIND))
+    if (!has && reg.kinds && typeof reg.kinds.set === 'function') {
+      var entry = {
+        definition: definition,
+        band: 'extension',
+        matchers: [],
+        order: (reg.registrations = (reg.registrations || 0) + 1),
+      }
+      try { if (reg.ids && reg.ids.add) reg.ids.add(CITE_TAB_ID) } catch (e2) {}
+      reg.kinds.set(CITE_TAB_KIND, { inForce: entry, shadowed: undefined })
+      try { if (typeof reg.refresh === 'function') reg.refresh() } catch (e3) {}
+      try { logDiag('cite-tab-manual-register', { ok: true, via: reg === (ctx.sidebarRight && ctx.sidebarRight.tabs) ? 'controller' : 'inject' }) } catch (e4) {}
+    }
+    return true
+  } catch (e5) {
+    try { logDiag('cite-tab-manual-register-fail', { msg: e5 && e5.message }) } catch (e6) {}
+    return false
+  }
+}
+
 function openCiteInSidebar(ctx, detail) {
+  try { ensureCiteTabType(ctx) } catch (e0) {}
   try {
     if (!ctx || !ctx.sidebarRight || typeof ctx.sidebarRight.openTab !== 'function') return false
     PENDING_CITE = { chunkId: String(detail.chunkId || ''), doc: String(detail.doc || ''), at: Date.now() }
@@ -587,29 +643,24 @@ function installErrorReporter() {
 function registerCiteTab(ctx) {
   try { installErrorReporter() } catch (e) {}
   try {
-    if (!ctx.sidebarRightTabs || !ctx.sidebarRight) {
+    if (!citeTabsOf(ctx) || !ctx.sidebarRight) {
       console.warn('[dsh-weknora] 没有 sidebarRight / sidebarRightTabs，角标只开面板')
       return false
     }
-    // register 内部自己会调 ctx.effect 管生命周期，外面不能再包一层（会与它的
-    // dispose 时序打架，导致 placeTab 取不到类型）。这里做幂等：注册前先清掉自己
-    // 上一次的注册；若仍报 already registered，说明当前实例已生效，视为成功。
+    ensureCiteTabType(ctx)
+
+    // 注册后立刻把注册表内部可见状态写进诊断日志：placeTab 报「no tab type」时，
+    // 这里能直接看出注册到底进没进 registry（kinds / cached / ids）。
     try {
-      if (citeTabTypeDispose) { try { citeTabTypeDispose() } catch (eD) {} ; citeTabTypeDispose = null }
-      citeTabTypeDispose = ctx.sidebarRightTabs.register({
-        id: CITE_TAB_ID,
-        kind: CITE_TAB_KIND,
-        priority: 'extension',
-        title: function () { return '知识库原文' },
-      })
-    } catch (eReg) {
-      var msg = String((eReg && eReg.message) || '')
-      if (msg.indexOf('already registered') < 0) {
-        console.warn('[dsh-weknora] tab 类型注册失败：' + msg)
-        try { logDiag('register-cite-tab-type-fail', { msg: msg }) } catch (e2) {}
-        return false
-      }
-    }
+      var reg = citeTabsOf(ctx)
+      var info = { keys: [], kinds: [], ids: [], cached: [] }
+      try { info.keys = Object.keys(reg) } catch (e0) {}
+      try { if (reg.kinds && reg.kinds.keys) info.kinds = Array.from(reg.kinds.keys()) } catch (e1) {}
+      try { if (reg.ids && reg.ids.forEach) reg.ids.forEach(function (v) { info.ids.push(v) }) } catch (e2) {}
+      try { info.cached = (reg.cached || []).map(function (d) { return d && d.kind }) } catch (e3) {}
+      logDiag('cite-tab-registry', info)
+    } catch (e4) {}
+
     // DSH 的 TabSlot 用 `entryKey = definition?.id ?? tab.kind` 找内容，正常命中
     // definition.id。这里按 id 注册一份即可；每个注册各自 try —— 任何一个 slot
     // 注册失败都不能让整个注册函数抛错，否则 apply 半途中断，连装饰器都不会跑

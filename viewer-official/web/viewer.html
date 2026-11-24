@@ -661,16 +661,38 @@ See https://github.com/adobe-type-tools/cmap-resources
       if (map[j][1] > at && map[j][0] < end) {
         map[j][2].style.backgroundColor = 'rgba(255,214,10,.48)'
         map[j][2].style.borderRadius = '2px'
+        map[j][2].setAttribute('data-wk-hl', '1')
       }
     }
     layer.setAttribute('data-wk-marked', '1')
     return true
+  }
+  // 命中后：滚到命中段（官方 viewer 的滚动容器是 #viewerContainer），并放大一档，
+  // 否则窄侧栏里一页缩得只剩轮廓，用户得手动放大才能看清。
+  function wkJump() {
+    if (window.__wkJumped) return
+    var hit = document.querySelector('[data-wk-hl]')
+    if (!hit) return
+    window.__wkJumped = true
+    try {
+      var app = window.PDFViewerApplication
+      if (app && app.pdfViewer && app.pdfViewer.currentScaleValue !== 'auto') {
+        try { app.pdfViewer.updateScale ? app.pdfViewer.updateScale({ value: '150' }) : (app.pdfViewer.currentScaleValue = '150') } catch (e1) {}
+      }
+    } catch (e2) {}
+    setTimeout(function () {
+      try { hit.scrollIntoView({ block: 'center', inline: 'nearest' }) } catch (e3) {}
+      setTimeout(function () {
+        try { hit.scrollIntoView({ block: 'center', inline: 'nearest' }) } catch (e4) {}
+      }, 260)
+    }, 160)
   }
   function markAll() {
     var needle = wkNeedle()
     if (!needle) return
     var layers = document.querySelectorAll('.textLayer')
     for (var i = 0; i < layers.length; i++) markOnce(layers[i], needle)
+    wkJump()
   }
   function start() {
     var app = window.PDFViewerApplication

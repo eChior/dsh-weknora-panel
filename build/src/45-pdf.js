@@ -482,7 +482,8 @@ function ReaderFrame(props) {
   var needle = String(props.needle || '').replace(/\s+/g, ' ').slice(0, 300)
   var fileUrl = API + '/r?p=' + encodeURIComponent('/pdf') +
     '&topic=' + encodeURIComponent(kbId) + '&name=' + encodeURIComponent(name)
-  var hash = 'page=' + (page > 0 ? page : 1) + '&zoom=page-width'
+  // 有命中就从 150% 起（否则窄侧栏里整页缩得看不清），无命中才用适合宽度
+  var hash = 'page=' + (page > 0 ? page : 1) + (needle ? '&zoom=150' : '&zoom=page-width')
   if (needle) hash += '&search=' + encodeURIComponent(needle.slice(0, 120))
   var src = API + '/vw/web/viewer.html?file=' + encodeURIComponent(fileUrl)
   if (needle) src += '&q=' + encodeURIComponent(needle)

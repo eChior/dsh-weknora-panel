@@ -266,7 +266,7 @@ var CSS = [
   '.dsh-wk-ans th,.dsh-wk-ans td{border:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.12));padding:5px 8px;text-align:left;vertical-align:top}',
   '.dsh-wk-ans th{background:var(--dsw-alias-bg-secondary,#f7f9fc);font-weight:600}',
   '.dsh-wk-ans h1,.dsh-wk-ans h2,.dsh-wk-ans h3,.dsh-wk-ans h4{font-size:1em;margin:14px 0 6px}',
-  '.dsh-wk-reader-frame{width:100%;height:100%;min-height:420px;border:0;background:#fff;border-radius:4px}',
+  '.dsh-wk-reader-frame{display:block;width:100%;height:100%;min-height:0;border:0;background:#fff;border-radius:4px}',
 ].join('')
 
 var CSS_TAG_ID = 'dsh-weknora/panel.css'

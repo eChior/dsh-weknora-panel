@@ -601,7 +601,11 @@ function citeChainDump() {
 function CiteTabBody(props) {
   // 挂载后量两次父链高度（700ms / 2500ms），看哪一层是 auto 高度、PDF 画完后溢出多少
   React.useEffect(function () {
-    var t0 = setTimeout(fixHeightChain, 120)
+    setTimeout(fixHeightChain, 120)
+    // iframe 里是整套 pdf.js，加载完成后才把容器撑到真实高度；
+    // 只在 120ms 时夹一次会被它顶开，所以几个时间点都重新夹一遍。
+    setTimeout(fixHeightChain, 700)
+    setTimeout(fixHeightChain, 1600)
     var t1 = setTimeout(citeChainDump, 700)
     var t2 = setTimeout(citeChainDump, 2500)
     return function () {

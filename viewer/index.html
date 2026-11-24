@@ -32,7 +32,25 @@
     position: relative; flex: 1; min-height: 0; overflow: auto;
     background: #f5f5f5;
   }
-  #viewer { position: relative; }
+  /* pdf_viewer.css 只带文本层/批注层，页面与容器的布局类是官方 viewer.html 内联的，
+     这里照抄一份，否则 .page 没有尺寸、画布不显示（表现为"有工具栏、看不到文件"）。 */
+  #viewer.pdfViewer { position: relative; padding: 8px 0; }
+  .pdfViewer .page {
+    position: relative; margin: 8px auto; background: #fff;
+    box-shadow: 0 1px 5px rgba(0,0,0,.16); overflow: visible;
+  }
+  .pdfViewer .page .canvasWrapper { overflow: hidden; }
+  .pdfViewer .page .canvasWrapper canvas { display: block; }
+  .pdfViewer .textLayer {
+    position: absolute; inset: 0; overflow: hidden; line-height: 1;
+    text-size-adjust: none; forced-color-adjust: none;
+    transform-origin: 0 0; opacity: 1; z-index: 2;
+  }
+  .pdfViewer .textLayer span,
+  .pdfViewer .textLayer br {
+    position: absolute; color: transparent; white-space: pre;
+    cursor: text; transform-origin: 0% 0%;
+  }
 
   /* 高亮：文字层里的命中片段 */
   .wk-hl {

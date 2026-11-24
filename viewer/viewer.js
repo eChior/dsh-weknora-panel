@@ -14,6 +14,24 @@ const NAME = params.get('name') || ''
 const START_PAGE = Math.max(1, parseInt(params.get('page') || '1', 10) || 1)
 const NEEDLE = String(params.get('q') || '').replace(/\s+/g, ' ').trim()
 
+// 把页面内的错误回传到宿主日志（DSH 里看不到 iframe 的控制台）
+function report(msg, extra) {
+  try {
+    fetch('/api/weknora/diag', {
+      method: 'POST',
+      headers: { 'content-type': 'text/plain' },
+      body: 'viewer ' + msg + ' ' + JSON.stringify(extra || {}),
+    }).catch(function () {})
+  } catch (e) { /* 上报失败不影响阅读 */ }
+}
+window.addEventListener('error', function (e) {
+  report('error', { m: e && e.message, s: String((e && e.error && e.error.stack) || '').slice(0, 400) })
+})
+window.addEventListener('unhandledrejection', function (e) {
+  var r = e && e.reason
+  report('reject', { m: String((r && r.message) || r), s: String((r && r.stack) || '').slice(0, 400) })
+})
+
 const eventBus = new EventBus()
 const linkService = new PDFLinkService({ eventBus })
 const findController = new PDFFindController({ eventBus, linkService })

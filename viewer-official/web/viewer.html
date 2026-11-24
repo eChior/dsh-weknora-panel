@@ -674,12 +674,8 @@ See https://github.com/adobe-type-tools/cmap-resources
     var hit = document.querySelector('[data-wk-hl]')
     if (!hit) return
     window.__wkJumped = true
-    try {
-      var app = window.PDFViewerApplication
-      if (app && app.pdfViewer && app.pdfViewer.currentScaleValue !== 'auto') {
-        try { app.pdfViewer.updateScale ? app.pdfViewer.updateScale({ value: '150' }) : (app.pdfViewer.currentScaleValue = '150') } catch (e1) {}
-      }
-    } catch (e2) {}
+    // 不动缩放：页面用 #zoom=page-width 打开，页宽正好等于侧栏宽，能看全整页。
+    // 这里只把命中段滚到视口中间，用户一打开就看到"对应的那段文字"。
     setTimeout(function () {
       try { hit.scrollIntoView({ block: 'center', inline: 'nearest' }) } catch (e3) {}
       setTimeout(function () {

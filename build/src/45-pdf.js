@@ -471,3 +471,21 @@ function PdfView(props) {
     h('div', { className: 'dsh-wk-pdfbox', ref: holder }),
     s.num ? h('div', { className: 'dsh-wk-pdfno dsh-wk-pdfno-float' }, s.cur + ' / ' + s.num) : null)
 }
+
+
+// paper-reader 的阅读器页面（vendor 里自带 pdf.js/katex/bcmap）。
+// 缩放、翻页、搜索、命中高亮都由它负责 —— 比在这里重写一套 pdf.js 稳。
+function ReaderFrame(props) {
+  var kbId = props.kbId || ''
+  var name = props.name || ''
+  var page = props.page || 0
+  var needle = String(props.needle || '').replace(/\s+/g, ' ').slice(0, 160)
+  var qs = 'topic=' + encodeURIComponent(kbId) + '&name=' + encodeURIComponent(name)
+  if (page > 1) qs += '&page=' + page
+  if (needle) qs += '&q=' + encodeURIComponent(needle)
+  return h('iframe', {
+    className: 'dsh-wk-reader-frame',
+    src: API + '/reader?' + qs,
+    title: '原件预览',
+  })
+}

@@ -61,6 +61,7 @@ exports.inject = inject
 exports.__dev = {
   renderMarkdown: renderMarkdown,
   PdfView: PdfView,
+  ReaderFrame: ReaderFrame,
   WeKnoraPage: WeKnoraPage,
   SetupDialog: SetupDialog,
   bindCiteLinks: bindCiteLinks,

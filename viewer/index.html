@@ -28,9 +28,10 @@
   #bar .grow { flex: 1; }
   #stat { color: #888; font-size: 11px; }
 
+  /* pdfjs v4 的 PDFViewer 要求 container 是 absolutely positioned，外面套一层占位 */
+  #viewerScroll { position: relative; flex: 1; min-height: 0; background: #f5f5f5; }
   #viewerContainer {
-    position: relative; flex: 1; min-height: 0; overflow: auto;
-    background: #f5f5f5;
+    position: absolute; inset: 0; overflow: auto; background: #f5f5f5;
   }
   /* pdf_viewer.css 只带文本层/批注层，页面与容器的布局类是官方 viewer.html 内联的，
      这里照抄一份，否则 .page 没有尺寸、画布不显示（表现为"有工具栏、看不到文件"）。 */
@@ -80,9 +81,11 @@
     <span class="sep"></span>
     <button id="next" title="下一页">›</button>
   </div>
+  <div id="viewerScroll">
   <div id="viewerContainer">
     <div id="viewer" class="pdfViewer"></div>
     <div id="tip"></div>
+  </div>
   </div>
 </div>
 <script type="module" src="./viewer.js"></script>

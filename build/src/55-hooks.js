@@ -291,9 +291,10 @@ function usePanelState() {
         // 和右侧栏用同一个阅读器（paper-reader 的 pdf.js 页面）：
         // 缩放、翻页、搜索、命中跳页都在里面，比浏览器原生 PDF 多出黄块定位。
         previewBody = h('div', { className: 'dsh-wk-nos' },
-          h(PdfView, {
-            id: preview.file.id,
-            page: preview.page || 0,
+          h(ReaderFrame, {
+            kbId: preview.file.knowledge_base_id || (curKb && curKb.id) || '',
+            name: preview.file.title || preview.file.file_name || preview.file.id,
+            page: preview.page || 1,
             needle: preview.focusContent || '',
           }))
       } else {

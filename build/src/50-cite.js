@@ -755,9 +755,10 @@ function CiteTabBodyInner(props) {
       ? h('div', { className: 'dsh-wk-citetab-b dsh-wk-nos' },
           !pageReady
             ? h('div', { className: 'dsh-wk-note' }, '正在定位原文所在页…')
-            : h(PdfView, {
-              id: s.knowledgeId,
-              page: located ? page : 0,
+            : h(ReaderFrame, {
+              kbId: s.kbId || '',
+              name: s.doc || s.knowledgeId || '',
+              page: located ? page : 1,
               needle: located && hitItem ? String(hitItem.content || '') : '',
             }))
       : h('div', { className: 'dsh-wk-citetab-b' }, body),

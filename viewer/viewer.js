@@ -36,7 +36,8 @@ const eventBus = new EventBus()
 const linkService = new PDFLinkService({ eventBus })
 const findController = new PDFFindController({ eventBus, linkService })
 const pdfViewer = new PDFViewer({
-  container: $('viewer'),
+  container: $('viewerContainer'),
+  viewer: $('viewer'),
   eventBus,
   linkService,
   findController,

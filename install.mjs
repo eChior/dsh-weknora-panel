@@ -29,6 +29,17 @@ const argOf = (name) => {
 const DSH_HOME = (process.env.DSH_HOME || '').trim() || path.join(os.homedir(), '.dsh')
 const profilesDir = path.join(DSH_HOME, 'profiles')
 
+function copyRecursive(from, to) {
+  const st = fs.statSync(from)
+  if (st.isDirectory()) {
+    fs.mkdirSync(to, { recursive: true })
+    for (const name of fs.readdirSync(from)) copyRecursive(path.join(from, name), path.join(to, name))
+    return
+  }
+  fs.mkdirSync(path.dirname(to), { recursive: true })
+  fs.copyFileSync(from, to)
+}
+
 function fail(msg) {
   console.error('\n[安装失败] ' + msg)
   process.exit(1)
@@ -81,7 +92,8 @@ for (const item of COPY) {
   const from = path.join(here, item)
   if (!fs.existsSync(from)) continue
   const to = path.join(target, item)
-  fs.cpSync(from, to, { recursive: true })
+  if (typeof fs.cpSync === 'function') fs.cpSync(from, to, { recursive: true })
+  else copyRecursive(from, to)
 }
 console.log('已复制文件：' + COPY.filter((i) => fs.existsSync(path.join(target, i))).join(', '))
 

@@ -691,6 +691,8 @@ See https://github.com/adobe-type-tools/cmap-resources
     wkJump()
   }
   function start() {
+    try { fetch('/api/weknora/diag', { method: 'POST', headers: { 'content-type': 'text/plain' },
+      body: 'viewer loaded ' + JSON.stringify({ href: location.href.slice(0, 260), dps: document.readyState }) }).catch(function () {}) } catch (e0) {}
     var app = window.PDFViewerApplication
     if (app && app.eventBus) {
       app.eventBus.on('textlayerrendered', function () { setTimeout(markAll, 60) })

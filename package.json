@@ -45,7 +45,8 @@
     "INSTALL.md",
     "NOTICE",
     "config.example.json",
-    "viewer-official"
+    "viewer-official",
+    "install.sh"
   ],
   "scripts": {
     "build": "node build/build.mjs",

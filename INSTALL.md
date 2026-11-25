@@ -20,9 +20,19 @@ dsh-weknora-panel/
 
 ## 二、安装
 
-**方式 A：双击 `install.cmd`**（Windows）
+**方式 A：一键脚本**
 
-它会自动找到 `%USERPROFILE%\.dsh\profiles\<profile>`，把插件复制进 `node_modules`，并在 profile 的 `package.json` 里登记依赖与 bundle。
+- Windows：双击 `install.cmd`
+- Linux / macOS：`chmod +x install.sh && ./install.sh`
+
+两个入口调的是同一个 `install.mjs`（Node 实现，用 `os.homedir()` + `path.join`，路径规则由 Node 处理，两平台通用）。
+它会自动找到 `<DSH_HOME>/profiles/<profile>`，把插件（含 `lib/`、`viewer-official/`、`vendor/`）复制进 `node_modules`，
+并在 profile 的 `package.json` 里登记依赖与 bundle。
+
+`DSH_HOME` 默认是 `~/.dsh`：
+- Windows：`C:\Users\<你>\.dsh`
+- Linux / macOS：`/home/<你>/.dsh`、`/Users/<你>/.dsh`
+- 想装到别处：`DSH_HOME=/opt/dsh ./install.sh`
 
 **方式 B：命令行**
 
@@ -32,27 +42,32 @@ node install.mjs --profile web   # 指定 profile
 node install.mjs --list          # 先看有哪些 profile
 ```
 
-**方式 D：从源码（仓库里没有 `lib/client.js`，需要构建一次）**
+**方式 C：从仓库**
 
 ```bash
 git clone <仓库地址> dsh-weknora-panel
 cd dsh-weknora-panel
-npm install          # 只装 esbuild + @open-file-viewer/core
-npm run build        # 生成 lib/client.js（约 10 MB）
-node install.mjs     # 复制到 profile
+node install.mjs      # lib/client.js 与 viewer-official 已经随仓库提供，不需要再构建
 ```
 
-`lib/client.js` 是 esbuild 打出来的浏览器 bundle（10 MB），放在 `.gitignore` 里不进仓库；
-`vendor/pdfjs/` 是运行时依赖，仓库里有，别删。
+只有改过 `build/src/*.js` 或 `build/viewer.src.js` 才需要：
 
-**方式 C：手动**
+```bash
+npm install
+npm run build        # 重新生成 lib/client.js
+```
 
-1. 整个目录复制到 `<DSH_HOME>/profiles/<profile>/node_modules/dsh-weknora-panel`
-   （`DSH_HOME` 默认 `C:\Users\<你>\.dsh`）
+**方式 D：手动**
+
+1. 把整个目录复制到 `<DSH_HOME>/profiles/<profile>/node_modules/dsh-weknora-panel`
+   （Windows `C:\Users\<你>\.dsh`，Linux `/home/<你>/.dsh`）
 2. 编辑 `<DSH_HOME>/profiles/<profile>/package.json`：
    - `dependencies` 里加 `"dsh-weknora-panel": "file:./node_modules/dsh-weknora-panel"`
    - `dsh.profile.bundles` 数组里加 `"dsh-weknora-panel"`
 3. 重启 DSH。
+
+> `viewer-official/`（约 8.8 MB，370 个文件）是官网 pdf.js viewer 的完整包，**必须一起复制** ——
+> 少了它，点角标打开原文会白屏（这是早期版本的坑，安装脚本已修）。
 
 ## 三、装完怎么验
 

@@ -515,7 +515,13 @@ function CiteTabTitle(props) {
 // ── 客户端 PDF 渲染（pdfjs 画 canvas，命中段叠黄框）──
 var __pdfjs = null
 
+var __wkChainAt = 0
 function fixHeightChain() {
+  // 会被 120/700/1600ms 三次定时器 + open-cite 调用；短时间重复跑会和 DSH 的
+  // ResizeObserver 互相触发（日志里成片的 "loop completed with undelivered notifications"）。
+  var now = Date.now()
+  if (now - __wkChainAt < 400) return
+  __wkChainAt = now
   // 数据（parent-chain 探针）：我们的容器 h=834、tabBody h=834，但**中间那层 DIV h=0**。
   // 也就是说 DSH 的 wrapper 把高度链断掉了 —— 我们的 height:100% 解析成 0（白屏），
   // 之前一直靠 min-height 硬造高度，造过头就把整页顶高。

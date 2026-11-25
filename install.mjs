@@ -71,7 +71,7 @@ console.log('profile  : ' + profile)
 console.log('安装到   : ' + target)
 
 // 1) 复制包内容
-const COPY = ['package.json', 'lib', 'vendor', 'cordis.patch.yml', 'config.json', 'README.md', 'INSTALL.md']
+const COPY = ['package.json', 'lib', 'viewer-official', 'vendor', 'cordis.patch.yml', 'config.json', 'README.md', 'INSTALL.md']
 fs.mkdirSync(path.dirname(target), { recursive: true })
 if (fs.existsSync(target)) {
   fs.rmSync(target, { recursive: true, force: true })

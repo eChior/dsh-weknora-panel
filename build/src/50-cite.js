@@ -166,8 +166,38 @@ function citeShortOk(short) {
   return citeCheck(short.slice(0, 7)) === short.charAt(7)
 }
 
+// 角标编号要「每条回答从 1 开始」，所以序号不能按整个 root 算 ——
+// DSH 的消息都挂在同一个 body 下，按 root 算就会跨消息累加（用户看到的「编号一直涨」）。
+// 这里按「文本节点所属的那条消息块」分组：向上找第一个高度明显小于列表容器的块级祖先，
+// 用 WeakMap 给它分配一个独立计数器。
+var __wkGroupSeq = new WeakMap()
+function seqGroupOf(node, root) {
+  try {
+    var vh = (root && root.nodeType === 9 ? root.defaultView : window) || window
+    var limit = (vh.innerHeight || 900) * 0.6
+    var el = node.parentElement
+    var best = null
+    var depth = 0
+    while (el && el !== root && depth < 12) {
+      var h = el.offsetHeight || 0
+      if (h > 40 && h < limit) best = el        // 既不是单行碎片，也不是整页列表
+      el = el.parentElement
+      depth++
+    }
+    return best || root || node
+  } catch (e) {
+    return root || node
+  }
+}
+function seqOf(node, root, short) {
+  var g = seqGroupOf(node, root)
+  var box = __wkGroupSeq.get(g)
+  if (!box) { box = { n: 0, map: {} }; __wkGroupSeq.set(g, box) }
+  if (!box.map[short]) box.map[short] = ++box.n
+  return box.map[short]
+}
+
 function decorateOneRoot(root) {
-  var localSeq = { __n: 0 }
 
   // 先清掉「脏标记」：模型把 [#cb6ea94c] 抄成 [#C~hn]、[#?R] 这种情况，
   // 既点不了也不该出现在正文里。含合法短码的文本节点跳过，交给下面正常装饰。
@@ -224,8 +254,7 @@ function decorateOneRoot(root) {
       if (short) {
         // 短码：不需要编号表，短码本身就指向唯一 chunk。
         // 显示编号按「本条消息内第几次出现」算，所以每条回答都从 1 开始。
-        var seq = localSeq[short]
-        if (!seq) { seq = (++localSeq.__n); localSeq[short] = seq }
+        var seq = seqOf(src, root, short)
         var doc = ''
         if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)))
         a = document.createElement('a')

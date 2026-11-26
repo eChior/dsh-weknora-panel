@@ -147,6 +147,7 @@ function decorateOneRoot(root) {
     var txt = node.nodeValue
     if (!txt || (txt.indexOf('[') < 0 && txt.indexOf('【') < 0)) continue
     // 新格式 [#ab12cd34]（短码，全局唯一）；旧格式 [1] / 【1】（历史消息）
+    MARK_RE.lastIndex = 0
     if (!MARK_RE.test(txt)) continue
     if (decorateSkip(node)) continue
     nodes.push(node)
@@ -192,11 +193,40 @@ function decorateOneRoot(root) {
 }
 
 function logDiag(evt, data) {
+  if (window.__WK_DIAG_BUSY__) return   // 防止「记录日志本身出错 → 又触发错误上报」的递归
   try {
-    var s = evt + ' ' + JSON.stringify(data || {})
+    window.__WK_DIAG_BUSY__ = true
+    var s = evt + ' ' + safeJson(data || {})
     var p = fetch(API + '/diag', { method: 'POST', body: s })
     if (p && typeof p.catch === 'function') p.catch(function () { /* 诊断端点不可用时静默 */ })
   } catch (e) { /* 忽略 */ }
+  finally { try { window.__WK_DIAG_BUSY__ = false } catch (e2) {} }
+}
+
+// 只序列化「能安全展开的纯数据」：DOM 节点、window 这类带循环引用的对象一律换成短标签，
+// 否则 JSON.stringify 会抛 circular，错误上报再触发上报，最终就是 Maximum call stack size exceeded。
+function safeJson(v, depth) {
+  var d = depth || 0
+  try {
+    if (v === null || v === undefined) return 'null'
+    var t = typeof v
+    if (t === 'string') return JSON.stringify(v.length > 400 ? v.slice(0, 400) + '…' : v)
+    if (t === 'number' || t === 'boolean') return String(v)
+    if (t === 'function') return '"[function]"'
+    if (d >= 3) return '"[deep]"'
+    if (v.nodeType || v === window || v === document) return '"[dom]"'
+    if (Array.isArray(v)) {
+      var arr = []
+      for (var i = 0; i < v.length && i < 40; i++) arr.push(safeJson(v[i], d + 1))
+      return '[' + arr.join(',') + ']'
+    }
+    var parts = []
+    var keys = Object.keys(v).slice(0, 30)
+    for (var k = 0; k < keys.length; k++) parts.push(JSON.stringify(keys[k]) + ':' + safeJson(v[keys[k]], d + 1))
+    return '{' + parts.join(',') + '}'
+  } catch (e) {
+    return '"[unserializable]"'
+  }
 }
 
 // 启动后自动采样一轮（每 5 秒一次，共 12 次），不需要用户刻意操作，

@@ -239,13 +239,9 @@ function DocxView(props) {
     var alive = true
     var el = boxRef.current
     if (!el) return undefined
-    el.innerHTML = ''
     setS({ loading: true })
     // docx-preview 对大文档会卡很久甚至一直 pending，给个兜底，别让用户干等
-    var guard = setTimeout(function () {
-      if (alive) setS({ loading: false, error: '渲染超时：这份文档偏大，可以先用「看文本」读分块内容' })
-    }, 20000)
-    var done = function (v) { clearTimeout(guard); if (alive) setS(v) }
+    var done = function (v) { if (alive) setS(v) }
     fetch(API + '/content?id=' + encodeURIComponent(props.id || ''))
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob() })
       .then(function (blob) {

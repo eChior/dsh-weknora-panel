@@ -145,10 +145,36 @@ function _doDecorate() {
 // 只认短码 [#ab12cd34]。裸 [1] 一律不装饰：
 // 正文示例、代码里的 m[1]、思考过程里的编号都会被误伤，
 // 之前把推理区里的 m[1] 染成蓝角标就是这么来的。
-var MARK_RE = /[\[【]#([0-9a-z]{6,12})[\]】]/g
+// 只认规范短码 [#8位小写hex]。模型复述时会把 [#cb6ea94c] 抄成 [#C~hn]、[#?R]，
+// 这类脏标记既点不了又不该显示，由 MARK_JUNK 直接隐藏掉。
+var MARK_RE = /[\[【]#([0-9a-f]{8})[\]】]/g
+var MARK_JUNK = /[\[【]#[^\[\]【】\n]{1,14}[\]】]/g
 
 function decorateOneRoot(root) {
   var localSeq = { __n: 0 }
+
+  // 先清掉「脏标记」：模型把 [#cb6ea94c] 抄成 [#C~hn]、[#?R] 这种情况，
+  // 既点不了也不该出现在正文里。含合法短码的文本节点跳过，交给下面正常装饰。
+  try {
+    var junkWalker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null)
+    var junkNodes = []
+    var jn
+    while ((jn = junkWalker.nextNode())) {
+      var jt = jn.nodeValue
+      if (!jt || (jt.indexOf('[#') < 0 && jt.indexOf('【#') < 0)) continue
+      if (decorateSkip(jn)) continue
+      MARK_RE.lastIndex = 0
+      if (MARK_RE.test(jt)) continue
+      MARK_JUNK.lastIndex = 0
+      if (MARK_JUNK.test(jt)) junkNodes.push(jn)
+    }
+    for (var ji = 0; ji < junkNodes.length; ji++) {
+      var nn = junkNodes[ji]
+      MARK_JUNK.lastIndex = 0
+      nn.nodeValue = String(nn.nodeValue).replace(MARK_JUNK, '')
+    }
+  } catch (e) { /* 清不掉就保持原样，不影响下面的装饰 */ }
+
   var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null)
   var nodes = []
   var node

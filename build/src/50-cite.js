@@ -147,7 +147,7 @@ function _doDecorate() {
 // 之前把推理区里的 m[1] 染成蓝角标就是这么来的。
 // 只认规范短码 [#8位小写hex]。模型复述时会把 [#cb6ea94c] 抄成 [#C~hn]、[#?R]，
 // 这类脏标记既点不了又不该显示，由 MARK_JUNK 直接隐藏掉。
-var MARK_RE = /[\[【]#([0-9a-f]{8})[\]】]/g
+var MARK_RE = /[\[【]#([0-9a-z]{4,12})[\]】]/g
 var MARK_JUNK = /[\[【]#[^\[\]【】\n]{1,14}[\]】]/g
 
 function decorateOneRoot(root) {

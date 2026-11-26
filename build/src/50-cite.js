@@ -783,6 +783,7 @@ function CiteTabBodyInner(props) {
   var ob = React.useState(true); var officeOn = ob[0], setOfficeOn = ob[1]
   // 命中段在 PDF 的第几页 —— 拿到后给 iframe 加 #page=N，直接翻过去
   var pg = React.useState(0); var page = pg[0], setPage = pg[1]
+  var hq = React.useState(''); var hitQuote = hq[0], setHitQuote = hq[1]
   var rd = React.useState(false); var pageReady = rd[0], setPageReady = rd[1]
 
   React.useEffect(function () {
@@ -828,7 +829,7 @@ function CiteTabBodyInner(props) {
     var alive = true
     setPageReady(false)
     api('/pdfpage?id=' + encodeURIComponent(s.knowledgeId) + '&chunk=' + encodeURIComponent(chunkId))
-      .then(function (r) { if (alive && r && r.ok && r.page) setPage(r.page) })
+      .then(function (r) { if (alive && r && r.ok) { if (r.page) setPage(r.page); if (r.quote) setHitQuote(String(r.quote)) } })
       .catch(function () { /* 定位失败就从第一页看 */ })
       .then(function () { if (alive) setPageReady(true) })
     return function () { alive = false }
@@ -882,7 +883,7 @@ function CiteTabBodyInner(props) {
               kbId: s.kbId || '',
               name: s.doc || s.knowledgeId || '',
               page: located ? page : 1,
-              needle: located && hitItem ? String(hitItem.content || '') : '',
+              needle: located ? (hitQuote || (hitItem ? String(hitItem.content || '') : '')) : '',
             }))
       : h('div', { className: 'dsh-wk-citetab-b' }, body),
   )

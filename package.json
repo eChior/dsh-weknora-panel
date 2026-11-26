@@ -64,5 +64,8 @@
       "name": "ikevss",
       "url": "https://github.com/ikevss"
     }
-  ]
+  ],
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  }
 }

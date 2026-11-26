@@ -22,7 +22,6 @@ var API = '/api/weknora'
 
 // ── 样式 ─────────────────────────────────────────────────
 var CSS = [
-  '.dsh-wk-docxframe{width:100%;height:100%;min-height:420px;border:0;background:#f5f5f5;border-radius:4px}',
   '.dsh-wk-docxbox *:not(.dsh-wk-hl){background-color:transparent!important;background-image:none!important}',
   '.dsh-wk-docxbox .dsh-wk-hl,.dsh-wk-docxbox mark.dsh-wk-hl{background-color:rgba(255,214,10,.45)!important;color:inherit!important}',
   '.dsh-wk-docxwrap{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column}',

@@ -287,8 +287,6 @@ function usePanelState() {
       // 和右侧栏用同一个 pdfjs 渲染器：连续滚动翻页，滚轮就是翻页。
       // 换成 iframe 会带上浏览器自带的「上一页/下一页」工具条，样式也不一致。
       if (previewIsDocx) {
-        // Word：docx-preview 直接渲染原件（用户在 Electron 里已经验证过能渲染），
-        // 定位靠 locator 的 block / quote。
         previewBody = h('div', { className: 'dsh-wk-nos' },
           h(DocxView, { id: preview.file.id, block: preview.block || 0, quote: preview.focusContent || '' }))
       } else if (previewIsSheet) {

@@ -877,15 +877,18 @@ function CiteTabBodyInner(props) {
       }, '✕'),
     ),
     officeOn && s.knowledgeId
-      ? h('div', { className: 'dsh-wk-citetab-b dsh-wk-nos' },          /^(xls|xlsx|xlsm|xlsb|ods|csv|tsv)$/i.test(extOf({ title: s.doc || '', file_name: s.doc || '', file_type: s.fileType || '' }) || '')
-            ? h(SheetView, { id: s.knowledgeId, chunk: chunkId, quote: hitQuote || (hitItem ? String(hitItem.content || '') : '') })
+      ? h('div', { className: 'dsh-wk-citetab-b dsh-wk-nos' },
+          /^(xls|xlsx|xlsm|xlsb|ods|csv|tsv)$/i.test(extOf({ title: s.doc || '', file_name: s.doc || '', file_type: s.fileType || '' }) || '')
+            // 表格：右栏也渲染成表格，别转 PDF（转了就是「看不出是 Excel」）
+            ? h(SheetView, { id: s.knowledgeId })
             : /^(docx|doc|odt|rtf)$/i.test(extOf({ title: s.doc || '', file_name: s.doc || '', file_type: s.fileType || '' }) || '')
-              ? h(DocxView, {
-                id: s.knowledgeId,
-                block: hitBlock || 0,
-                quote: hitQuote || (hitItem ? String(hitItem.content || '') : ''),
-              })
-              : (!pageReady
+            // Word：直接渲染 docx 原件，按 locator 的 block（第 N 段）精确跳过去
+            ? h(DocxView, {
+              id: s.knowledgeId,
+              block: hitBlock || 0,
+              quote: hitQuote || (hitItem ? String(hitItem.content || '') : ''),
+            })
+            : (!pageReady
               ? h('div', { className: 'dsh-wk-note' }, '正在定位原文所在页…')
               : h(ReaderFrame, {
                 id: s.knowledgeId || '',

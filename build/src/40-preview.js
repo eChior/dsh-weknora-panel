@@ -177,56 +177,23 @@ function snippet(text, limit) {
 // 表格预览：宿主用 xlsx 把文件解析成二维数组，这里渲染成 HTML 表格。
 // 不转 PDF —— 表格转 PDF 后列宽丢失、跨页错行，基本没法看。
 function SheetView(props) {
-  var boxRef = React.useRef(null)
   var st = React.useState({ loading: true })
   var s = st[0], setS = st[1]
   React.useEffect(function () {
     var alive = true
-    api('/sheet?id=' + encodeURIComponent(props.id || '') + (props.chunk ? '&chunk=' + encodeURIComponent(props.chunk) : ''))
+    api('/sheet?id=' + encodeURIComponent(props.id || ''))
       .then(function (r) {
         if (!alive) return
-        if (r && r.ok) setS({ loading: false, sheets: r.sheets || [], hit: r.hit || null })
+        if (r && r.ok) setS({ loading: false, sheets: r.sheets || [] })
         else setS({ loading: false, error: (r && r.message) || '读不到表格' })
       })
-      .catch(function (e) { done({ loading: false, error: String((e && e.message) || e) }) })
+      .catch(function (e) { if (alive) setS({ loading: false, error: String((e && e.message) || e) }) })
     return function () { alive = false }
   }, [props.id])
-  // 命中单元格：按引文在单元格里找，找到就标黄并滚过去
-  React.useEffect(function () {
-    if (s.loading || s.error) return undefined
-    var box = boxRef.current
-    if (!box) return undefined
-    var old = box.querySelectorAll('td.dsh-wk-sheet-hit')
-    for (var i = 0; i < old.length; i++) old[i].classList.remove('dsh-wk-sheet-hit')
-    // 优先按 locator 的行号定位（精确），没有行号才退回按引文找格
-    var hr = Number(s.hit && s.hit.rowStart) || 0
-    if (hr > 0) {
-      var trs = box.querySelectorAll('tr')
-      var tr = trs[hr] || trs[hr - 1]
-      if (tr) {
-        tr.classList.add('dsh-wk-sheet-hit')
-        try { tr.scrollIntoView({ block: 'center' }) } catch (e) { /* 忽略 */ }
-        return undefined
-      }
-    }
-    var q = String(props.quote || '').replace(/\s+/g, '')
-    if (q.length < 4) return undefined
-    var tds = box.querySelectorAll('td')
-    var t = null
-    for (var j = 0; j < tds.length; j++) {
-      var txt = String(tds[j].textContent || '').replace(/\s+/g, '')
-      if (txt && q.indexOf(txt) >= 0 && txt.length >= 4) { t = tds[j]; break }
-      if (txt && txt.indexOf(q.slice(0, Math.min(12, q.length))) >= 0) { t = tds[j]; break }
-    }
-    if (!t) return undefined
-    t.classList.add('dsh-wk-sheet-hit')
-    try { t.scrollIntoView({ block: 'center', inline: 'center' }) } catch (e) { /* 忽略 */ }
-    return undefined
-  }, [s.loading, s.error, s.hit, props.quote])
   if (s.loading) return h('div', { className: 'dsh-wk-note' }, '正在读表格…')
   if (s.error) return h('div', { className: 'dsh-wk-err' }, s.error)
   if (!s.sheets || !s.sheets.length) return h('div', { className: 'dsh-wk-note' }, '这个表格里没有可显示的内容')
-  return h('div', { className: 'dsh-wk-sheetwrap', ref: boxRef },
+  return h('div', { className: 'dsh-wk-sheetwrap' },
     s.sheets.map(function (sh, si) {
       return h('div', { key: si, className: 'dsh-wk-sheetone' },
         h('div', { className: 'dsh-wk-sheetname' }, String(sh.name || ('Sheet' + (si + 1))) + ' · ' + (sh.totalRows || sh.rows.length) + ' 行'),
@@ -240,9 +207,8 @@ function SheetView(props) {
     }))
 }
 
-// Word 原件：渲染放在 iframe 里。
-// docx-preview 在主渲染进程里跑会把事件循环卡住（表现就是永远停在「正在渲染」），
-// 塞进独立文档就完全隔离了 —— 它挂了也只挂自己那格，主界面照常。
+// Word 原件：用 docx-preview 直接渲染 docx（不再转 PDF）。
+// Word 原件放 iframe 里渲染：docx-preview 在主进程会卡死事件循环。
 function DocxView(props) {
   var src = API + '/docxview?id=' + encodeURIComponent(props.id || '')
     + '&block=' + encodeURIComponent(String(props.block || 0))

@@ -286,10 +286,7 @@ function usePanelState() {
       // Office 文档默认走「原件」：宿主用 DSH 自带的 LibreOffice 套件把它转成 PDF，
       // 和右侧栏用同一个 pdfjs 渲染器：连续滚动翻页，滚轮就是翻页。
       // 换成 iframe 会带上浏览器自带的「上一页/下一页」工具条，样式也不一致。
-      if (previewIsDocx) {
-        previewBody = h('div', { className: 'dsh-wk-nos' },
-          h(DocxView, { id: preview.file.id, block: preview.block || 0, quote: preview.focusContent || '' }))
-      } else if (previewIsSheet) {
+      if (previewIsSheet) {
         // 表格直接渲染成真表格：宿主用 xlsx 解析，列宽/行号都保得住。
         previewBody = h('div', { className: 'dsh-wk-nos' }, h(SheetView, { id: preview.file.id }))
       } else if (previewIsOffice && officeOn) {

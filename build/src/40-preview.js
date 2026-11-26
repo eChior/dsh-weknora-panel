@@ -190,6 +190,28 @@ function SheetView(props) {
       .catch(function (e) { done({ loading: false, error: String((e && e.message) || e) }) })
     return function () { alive = false }
   }, [props.id])
+  // 命中单元格：按引文在单元格里找，找到就标黄并滚过去
+  React.useEffect(function () {
+    if (s.loading || s.error) return undefined
+    var box = null
+    try { box = document.querySelector('.dsh-wk-sheetwrap') } catch (e) { box = null }
+    if (!box) return undefined
+    var old = box.querySelectorAll('td.dsh-wk-sheet-hit')
+    for (var i = 0; i < old.length; i++) old[i].classList.remove('dsh-wk-sheet-hit')
+    var q = String(props.quote || '').replace(/\s+/g, '')
+    if (q.length < 4) return undefined
+    var tds = box.querySelectorAll('td')
+    var t = null
+    for (var j = 0; j < tds.length; j++) {
+      var txt = String(tds[j].textContent || '').replace(/\s+/g, '')
+      if (txt && q.indexOf(txt) >= 0 && txt.length >= 4) { t = tds[j]; break }
+      if (txt && txt.indexOf(q.slice(0, Math.min(12, q.length))) >= 0) { t = tds[j]; break }
+    }
+    if (!t) return undefined
+    t.classList.add('dsh-wk-sheet-hit')
+    try { t.scrollIntoView({ block: 'center', inline: 'center' }) } catch (e) { /* 忽略 */ }
+    return undefined
+  }, [s.loading, s.error, props.quote])
   if (s.loading) return h('div', { className: 'dsh-wk-note' }, '正在读表格…')
   if (s.error) return h('div', { className: 'dsh-wk-err' }, s.error)
   if (!s.sheets || !s.sheets.length) return h('div', { className: 'dsh-wk-note' }, '这个表格里没有可显示的内容')

@@ -878,7 +878,7 @@ function CiteTabBodyInner(props) {
     ),
     officeOn && s.knowledgeId
       ? h('div', { className: 'dsh-wk-citetab-b dsh-wk-nos' },          /^(xls|xlsx|xlsm|xlsb|ods|csv|tsv)$/i.test(extOf({ title: s.doc || '', file_name: s.doc || '', file_type: s.fileType || '' }) || '')
-            ? h(SheetView, { id: s.knowledgeId, quote: hitQuote || (hitItem ? String(hitItem.content || '') : '') })
+            ? h(SheetView, { id: s.knowledgeId, chunk: chunkId, quote: hitQuote || (hitItem ? String(hitItem.content || '') : '') })
             : /^(docx|doc|odt|rtf)$/i.test(extOf({ title: s.doc || '', file_name: s.doc || '', file_type: s.fileType || '' }) || '')
               ? h(DocxView, {
                 id: s.knowledgeId,

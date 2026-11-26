@@ -274,7 +274,10 @@ function usePanelState() {
   var previewIsOffice = !!(previewExt && OFFICE_TYPES[previewExt])
   // 表格类不走 PDF：LibreOffice 转出来的表格 PDF 没有列宽与分页可言，读起来是灾难。
   // DSH 自己就能打开 Excel，这里只负责把文件交出去（下载 / 在 DSH 里打开）。
-  var previewIsSheet = /^(xls|xlsx|xlsm|ods|csv)$/.test(previewExt || '')
+  // 表格文件不在面板里 PDF 化：列宽会丢、还容易整页错乱。
+  // file_type 与文件名任一线索命中都算（WeKnora 有时 file_type 为空、或把 xlsx 标成 doc）
+  var previewIsSheet = /^(xls|xlsx|xlsm|xlsb|ods|csv|tsv)$/.test(previewExt || '')
+    || /^(xls|xlsx|xlsm|xlsb|ods|csv|tsv)$/i.test(String((preview.file && preview.file.file_type) || ''))
   var previewBody = null
   if (preview) {
     if (preview.kind === 'text') {

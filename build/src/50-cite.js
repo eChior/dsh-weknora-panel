@@ -150,6 +150,22 @@ function _doDecorate() {
 var MARK_RE = /[\[【]#([0-9a-z]{4,12})[\]】]/g
 var MARK_JUNK = /[\[【]#[^\[\]【】\n]{1,14}[\]】]/g
 
+// 短码校验位：前 7 位加权和 mod 16。模型抄错一位时校验几乎必然失败，
+// 这条标记会被当成脏标记清掉 —— 不会再悄悄指向另一个文件的 chunk。
+function citeCheck(body) {
+  var s = 0
+  for (var i = 0; i < body.length; i++) {
+    var v = parseInt(body.charAt(i), 16)
+    if (isNaN(v)) return ''
+    s += v * (i + 1)
+  }
+  return (s % 16).toString(16)
+}
+function citeShortOk(short) {
+  if (!short || short.length !== 8) return false
+  return citeCheck(short.slice(0, 7)) === short.charAt(7)
+}
+
 function decorateOneRoot(root) {
   var localSeq = { __n: 0 }
 
@@ -202,6 +218,9 @@ function decorateOneRoot(root) {
     while ((m = re.exec(text))) {
       var short = m[1] || ''
       var a
+      // 注意：这里曾经用 citeShortOk() 硬校验，结果把**历史消息里的旧短码**全判成脏标记
+      // （旧码没有校验位），角标成片消失 —— 属于破坏性变更，已撤回。
+      // 现在一律交给宿主 /cite 判断：表里有这个短码就认，没有才提示「出处失效」。
       if (short) {
         // 短码：不需要编号表，短码本身就指向唯一 chunk。
         // 显示编号按「本条消息内第几次出现」算，所以每条回答都从 1 开始。

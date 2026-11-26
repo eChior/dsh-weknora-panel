@@ -134,7 +134,7 @@ var MEDIA_TYPES = { mp3: 1, wav: 1, m4a: 1, ogg: 1, aac: 1, flac: 1, mp4: 1, web
 function extOf(f) {
   if (!f) return ''
   var n = String(f.file_name || f.title || '')
-  var m = /\\.([A-Za-z0-9]{1,6})$/.exec(n)
+  var m = /\.([A-Za-z0-9]{1,6})$/.exec(n)
   if (m) return m[1].toLowerCase()
   return String(f.file_type || '').toLowerCase()
 }
@@ -148,7 +148,7 @@ function previewKindOf(f) {
 /** 给预览引擎一个带扩展名的文件名（WeKnora 的 file_name 本来就有，兜底时才补） */
 function fileNameForFile(f) {
   var n = String((f && (f.file_name || f.title)) || '')
-  if (/\\.([A-Za-z0-9]{1,6})$/.test(n)) return n
+  if (/\.([A-Za-z0-9]{1,6})$/.test(n)) return n
   var ext = extOf(f)
   return ext ? n + '.' + ext : n
 }

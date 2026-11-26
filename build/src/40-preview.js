@@ -187,7 +187,7 @@ function SheetView(props) {
         if (r && r.ok) setS({ loading: false, sheets: r.sheets || [] })
         else setS({ loading: false, error: (r && r.message) || '读不到表格' })
       })
-      .catch(function (e) { if (alive) setS({ loading: false, error: String((e && e.message) || e) }) })
+      .catch(function (e) { done({ loading: false, error: String((e && e.message) || e) }) })
     return function () { alive = false }
   }, [props.id])
   if (s.loading) return h('div', { className: 'dsh-wk-note' }, '正在读表格…')
@@ -219,6 +219,11 @@ function DocxView(props) {
     if (!el) return undefined
     el.innerHTML = ''
     setS({ loading: true })
+    // docx-preview 对大文档会卡很久甚至一直 pending，给个兜底，别让用户干等
+    var guard = setTimeout(function () {
+      if (alive) setS({ loading: false, error: '渲染超时：这份文档偏大，可以先用「看文本」读分块内容' })
+    }, 20000)
+    var done = function (v) { clearTimeout(guard); if (alive) setS(v) }
     fetch(API + '/content?id=' + encodeURIComponent(props.id || ''))
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob() })
       .then(function (blob) {
@@ -226,7 +231,7 @@ function DocxView(props) {
         if (!lib || typeof lib.renderAsync !== 'function') throw new Error('docx 渲染器没有加载（重启后重试）')
         return lib.renderAsync(blob, el, null, { inWrapper: true, ignoreWidth: false, ignoreHeight: true, breakPages: false, className: 'dsh-wk-docx' })
       })
-      .then(function () { if (alive) setS({ loading: false }) })
+      .then(function () { done({ loading: false }) })
       .catch(function (e) { if (alive) setS({ loading: false, error: String((e && e.message) || e) }) })
     return function () { alive = false }
   }, [props.id])

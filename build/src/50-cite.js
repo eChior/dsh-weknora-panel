@@ -103,20 +103,29 @@ function decorateSkip(node) {
 // DSH 的消息区可能挂在 shadow root 里（插件样式都要往每个 shadowRoot 塞一份），
 // 所以装饰器不能只看 document.body，得把所有 shadow root 一起扫。
 function citeRoots() {
+  // 原来用递归收集 shadow root：DSH 的组件树很深，每个组件几乎都有 shadowRoot，
+  // 递归层数直接跟着 DOM 深度走 → 深会话里就抛 Maximum call stack size exceeded。
+  // 改成显式栈迭代，并给收集数量设上限，任何页面结构都不会把这里撑爆。
   var out = []
-  var seen = []
-  var walk = function (root) {
-    if (!root || seen.indexOf(root) >= 0) return
-    seen.push(root)
+  var stack = []
+  var seen = new Set()
+  var budget = 400
+  try { if (document.body) stack.push(document.body) } catch (e) { return out }
+  while (stack.length && out.length < budget) {
+    var root = stack.pop()
+    if (!root || seen.has(root)) continue
+    seen.add(root)
     out.push(root)
     var els
-    try { els = root.querySelectorAll('*') } catch (e) { return }
-    for (var i = 0; i < els.length; i++) {
-      var sr = els[i] && els[i].shadowRoot
-      if (sr) walk(sr)
+    try { els = root.querySelectorAll('*') } catch (e) { continue }
+    var n = els.length
+    if (n > 4000) n = 4000           // 超大 DOM 只扫前 4000 个，避免长时间阻塞
+    for (var i = 0; i < n; i++) {
+      var el = els[i]
+      var sr = el && el.shadowRoot
+      if (sr && !seen.has(sr)) stack.push(sr)
     }
   }
-  try { if (document.body) walk(document.body) } catch (e) { /* 忽略 */ }
   return out
 }
 
@@ -143,7 +152,9 @@ function decorateOneRoot(root) {
   var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null)
   var nodes = []
   var node
+  var guard = 0
   while ((node = walker.nextNode())) {
+    if (++guard > 20000) break   // 单个 root 最多扫 2 万个文本节点
     var txt = node.nodeValue
     if (!txt || (txt.indexOf('[') < 0 && txt.indexOf('【') < 0)) continue
     // 新格式 [#ab12cd34]（短码，全局唯一）；旧格式 [1] / 【1】（历史消息）

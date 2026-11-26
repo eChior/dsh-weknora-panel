@@ -22,6 +22,14 @@ var API = '/api/weknora'
 
 // ── 样式 ─────────────────────────────────────────────────
 var CSS = [
+  '.dsh-wk-sheetwrap{flex:1;min-height:0;overflow:auto;padding:0 0 8px}',
+  '.dsh-wk-sheetone{margin:0 0 14px}',
+  '.dsh-wk-sheetname{font-size:12px;opacity:.7;margin:0 0 6px}',
+  '.dsh-wk-sheetbox{overflow:auto;border:1px solid rgba(0,0,0,.1);border-radius:4px;max-height:60vh}',
+  '.dsh-wk-sheettable{border-collapse:collapse;font-size:12px;line-height:1.5}',
+  '.dsh-wk-sheettable td{border:1px solid rgba(0,0,0,.08);padding:3px 8px;white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}',
+  '.dsh-wk-sheettable tr:nth-child(even) td{background:rgba(0,0,0,.015)}',
+  '.dsh-wk-sheethead{font-weight:600;background:rgba(0,0,0,.04)!important}',
   '.dsh-wk-root{display:flex;flex-direction:column;height:100%;max-height:100%;min-height:0;overflow:hidden;font-size:var(--dsw-font-base-font-size,14px);line-height:1.65;color:var(--dsw-alias-label-primary,#1a1a1a);background:var(--dsw-alias-bg-primary,#fff);font-family:var(--dsw-font-family,inherit)}',
   '.dsh-wk-head{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.08));flex-shrink:0}',
   '.dsh-wk-title{font-size:1.08em;font-weight:500}',

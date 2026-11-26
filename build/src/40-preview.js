@@ -173,3 +173,36 @@ function snippet(text, limit) {
 // 这里把它渲染成可点角标，点开就是那一段的逐字原文（和 WeKnora 网页端一致）。
 
 // 问答区：直接用 WeKnora 的接口渲染（不自造数据层）。
+
+// 表格预览：宿主用 xlsx 把文件解析成二维数组，这里渲染成 HTML 表格。
+// 不转 PDF —— 表格转 PDF 后列宽丢失、跨页错行，基本没法看。
+function SheetView(props) {
+  var st = React.useState({ loading: true })
+  var s = st[0], setS = st[1]
+  React.useEffect(function () {
+    var alive = true
+    api('/sheet?id=' + encodeURIComponent(props.id || ''))
+      .then(function (r) {
+        if (!alive) return
+        if (r && r.ok) setS({ loading: false, sheets: r.sheets || [] })
+        else setS({ loading: false, error: (r && r.message) || '读不到表格' })
+      })
+      .catch(function (e) { if (alive) setS({ loading: false, error: String((e && e.message) || e) }) })
+    return function () { alive = false }
+  }, [props.id])
+  if (s.loading) return h('div', { className: 'dsh-wk-note' }, '正在读表格…')
+  if (s.error) return h('div', { className: 'dsh-wk-err' }, s.error)
+  if (!s.sheets || !s.sheets.length) return h('div', { className: 'dsh-wk-note' }, '这个表格里没有可显示的内容')
+  return h('div', { className: 'dsh-wk-sheetwrap' },
+    s.sheets.map(function (sh, si) {
+      return h('div', { key: si, className: 'dsh-wk-sheetone' },
+        h('div', { className: 'dsh-wk-sheetname' }, String(sh.name || ('Sheet' + (si + 1))) + ' · ' + (sh.totalRows || sh.rows.length) + ' 行'),
+        h('div', { className: 'dsh-wk-sheetbox' },
+          h('table', { className: 'dsh-wk-sheettable' },
+            h('tbody', null, (sh.rows || []).map(function (r, ri) {
+              return h('tr', { key: ri }, (r || []).map(function (cell, ci) {
+                return h('td', { key: ci, className: ri === 0 ? 'dsh-wk-sheethead' : '' }, cell)
+              }))
+            })))))
+    }))
+}

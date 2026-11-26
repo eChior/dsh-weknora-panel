@@ -285,11 +285,8 @@ function usePanelState() {
       // 和右侧栏用同一个 pdfjs 渲染器：连续滚动翻页，滚轮就是翻页。
       // 换成 iframe 会带上浏览器自带的「上一页/下一页」工具条，样式也不一致。
       if (previewIsSheet) {
-        previewBody = h('div', { className: 'dsh-wk-note dsh-wk-sheetnote' },
-          h('div', null, '表格文件不在面板里渲染（PDF 化会丢列宽，还不如 DSH 自己的表格预览）。'),
-          h('div', { className: 'dsh-wk-sheetrow' },
-            h('button', { className: 'dsh-wk-btn', onClick: function () { downloadOriginal(preview.file.id, preview.file.file_name || preview.file.title) } }, '下载原件'),
-            h('button', { className: 'dsh-wk-btn', onClick: function () { sendToConversation('请打开这个表格文件：' + (preview.file.title || preview.file.file_name || '')) } }, '交给对话')))
+        // 表格直接渲染成真表格：宿主用 xlsx 解析，列宽/行号都保得住。
+        previewBody = h('div', { className: 'dsh-wk-nos' }, h(SheetView, { id: preview.file.id }))
       } else if (previewIsOffice && officeOn) {
         // 和右侧栏用同一个阅读器（paper-reader 的 pdf.js 页面）：
         // 缩放、翻页、搜索、命中跳页都在里面，比浏览器原生 PDF 多出黄块定位。

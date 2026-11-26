@@ -277,9 +277,9 @@ function usePanelState() {
   // 表格文件不在面板里 PDF 化：列宽会丢、还容易整页错乱。
   // file_type 与文件名任一线索命中都算（WeKnora 有时 file_type 为空、或把 xlsx 标成 doc）
   var previewIsDocx = /^(docx|doc|odt|rtf)$/.test(previewExt || '')
-    || /^(docx|doc|odt|rtf)$/i.test(String((preview.file && preview.file.file_type) || ''))
+    || /^(docx|doc|odt|rtf)$/i.test(String((preview && preview.file && preview.file.file_type) || ''))
   var previewIsSheet = /^(xls|xlsx|xlsm|xlsb|ods|csv|tsv)$/.test(previewExt || '')
-    || /^(xls|xlsx|xlsm|xlsb|ods|csv|tsv)$/i.test(String((preview.file && preview.file.file_type) || ''))
+    || /^(xls|xlsx|xlsm|xlsb|ods|csv|tsv)$/i.test(String((preview && preview.file && preview.file.file_type) || ''))
   var previewBody = null
   if (preview) {
     if (preview.kind === 'text') {

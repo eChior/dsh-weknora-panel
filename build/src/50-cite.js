@@ -796,6 +796,7 @@ function CiteTabBodyInner(props) {
       if (!r || !r.ok) throw new Error((r && r.message) || '取不到这段原文')
       var kid = r.knowledge_id || ''
       var kbId = r.knowledge_base_id || ''
+      if (r.doc) setDoc(String(r.doc))   // 文件名决定原件用哪个渲染器（docx / 表格 / PDF）
       return api('/text?id=' + encodeURIComponent(kid) + '&kbId=' + encodeURIComponent(kbId)).then(function (t) {
         if (!alive) return
         var items = (t && (t.items || t.chunks)) || []

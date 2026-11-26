@@ -276,6 +276,8 @@ function usePanelState() {
   // DSH 自己就能打开 Excel，这里只负责把文件交出去（下载 / 在 DSH 里打开）。
   // 表格文件不在面板里 PDF 化：列宽会丢、还容易整页错乱。
   // file_type 与文件名任一线索命中都算（WeKnora 有时 file_type 为空、或把 xlsx 标成 doc）
+  var previewIsDocx = /^(docx|doc|odt|rtf)$/.test(previewExt || '')
+    || /^(docx|doc|odt|rtf)$/i.test(String((preview.file && preview.file.file_type) || ''))
   var previewIsSheet = /^(xls|xlsx|xlsm|xlsb|ods|csv|tsv)$/.test(previewExt || '')
     || /^(xls|xlsx|xlsm|xlsb|ods|csv|tsv)$/i.test(String((preview.file && preview.file.file_type) || ''))
   var previewBody = null
@@ -284,7 +286,10 @@ function usePanelState() {
       // Office 文档默认走「原件」：宿主用 DSH 自带的 LibreOffice 套件把它转成 PDF，
       // 和右侧栏用同一个 pdfjs 渲染器：连续滚动翻页，滚轮就是翻页。
       // 换成 iframe 会带上浏览器自带的「上一页/下一页」工具条，样式也不一致。
-      if (previewIsSheet) {
+      if (previewIsDocx) {
+        previewBody = h('div', { className: 'dsh-wk-nos' },
+          h(DocxView, { id: preview.file.id, block: preview.block || 0, quote: preview.focusContent || '' }))
+      } else if (previewIsSheet) {
         // 表格直接渲染成真表格：宿主用 xlsx 解析，列宽/行号都保得住。
         previewBody = h('div', { className: 'dsh-wk-nos' }, h(SheetView, { id: preview.file.id }))
       } else if (previewIsOffice && officeOn) {
@@ -339,6 +344,6 @@ function usePanelState() {
     openFile: openFile, showCite: showCite, doSearch: doSearch,
     quoteFile: quoteFile, quoteHit: quoteHit, openInWeKnora: openInWeKnora,
     previewExt: previewExt, previewIsOffice: previewIsOffice,
-    previewIsSheet: previewIsSheet, previewBody: previewBody,
+    previewIsDocx: previewIsDocx, previewIsSheet: previewIsSheet, previewBody: previewBody,
   }
 }

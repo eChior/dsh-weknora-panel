@@ -152,3 +152,43 @@ function scrollIntoBox(el, block) {
   var next = box.scrollTop + (r.top - br.top) - offset
   box.scrollTop = Math.max(0, next)
 }
+
+// 在某个元素里按引文标黄：整段匹配优先，退化成 12 字滑窗。
+function highlightQuote(root, quote) {
+  try {
+    var needle = String(quote || '').replace(/\s+/g, '')
+    if (!root || needle.length < 6) return 0
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null)
+    var nodes = []
+    var full = ''
+    var pos = []
+    var n
+    while ((n = walker.nextNode())) {
+      if (!n.nodeValue || !n.nodeValue.trim()) continue
+      nodes.push(n)
+      pos.push(full.length)
+      full += n.nodeValue.replace(/\s+/g, '')
+    }
+    var at = full.indexOf(needle)
+    var len = needle.length
+    if (at < 0) {
+      var probe = needle.slice(0, 12)
+      at = full.indexOf(probe)
+      len = probe.length
+    }
+    if (at < 0) return 0
+    var end = at + len
+    var hits = 0
+    for (var i = 0; i < nodes.length; i++) {
+      var start = pos[i]
+      var stop = start + nodes[i].nodeValue.replace(/\s+/g, '').length
+      if (stop <= at || start >= end) continue
+      var frag = document.createRange()
+      frag.selectNodeContents(nodes[i])
+      var mark = document.createElement('mark')
+      mark.className = 'dsh-wk-hl'
+      try { frag.surroundContents(mark); hits++ } catch (e) { /* 跨节点时放弃 */ }
+    }
+    return hits
+  } catch (e) { return 0 }
+}

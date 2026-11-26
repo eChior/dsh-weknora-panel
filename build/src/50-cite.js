@@ -784,6 +784,7 @@ function CiteTabBodyInner(props) {
   // 命中段在 PDF 的第几页 —— 拿到后给 iframe 加 #page=N，直接翻过去
   var pg = React.useState(0); var page = pg[0], setPage = pg[1]
   var hq = React.useState(''); var hitQuote = hq[0], setHitQuote = hq[1]
+  var hb = React.useState(0); var hitBlock = hb[0], setHitBlock = hb[1]
   var rd = React.useState(false); var pageReady = rd[0], setPageReady = rd[1]
 
   React.useEffect(function () {
@@ -829,7 +830,7 @@ function CiteTabBodyInner(props) {
     var alive = true
     setPageReady(false)
     api('/pdfpage?id=' + encodeURIComponent(s.knowledgeId) + '&chunk=' + encodeURIComponent(chunkId))
-      .then(function (r) { if (alive && r && r.ok) { if (r.page) setPage(r.page); if (r.quote) setHitQuote(String(r.quote)) } })
+      .then(function (r) { if (alive && r && r.ok) { if (r.page) setPage(r.page); if (r.quote) setHitQuote(String(r.quote)); if (r.block) setHitBlock(Number(r.block)) } })
       .catch(function () { /* 定位失败就从第一页看 */ })
       .then(function () { if (alive) setPageReady(true) })
     return function () { alive = false }
@@ -876,15 +877,22 @@ function CiteTabBodyInner(props) {
     ),
     officeOn && s.knowledgeId
       ? h('div', { className: 'dsh-wk-citetab-b dsh-wk-nos' },
-          !pageReady
-            ? h('div', { className: 'dsh-wk-note' }, '正在定位原文所在页…')
-            : h(ReaderFrame, {
-              id: s.knowledgeId || '',
-              kbId: s.kbId || '',
-              name: s.doc || s.knowledgeId || '',
-              page: located ? page : 1,
-              needle: located ? (hitQuote || (hitItem ? String(hitItem.content || '') : '')) : '',
-            }))
+          /^(docx|doc|odt|rtf)$/i.test(extOf({ title: s.doc || '', file_name: s.doc || '', file_type: s.fileType || '' }) || '')
+            // Word：直接渲染 docx 原件，按 locator 的 block（第 N 段）精确跳过去
+            ? h(DocxView, {
+              id: s.knowledgeId,
+              block: hitBlock || 0,
+              quote: hitQuote || (hitItem ? String(hitItem.content || '') : ''),
+            })
+            : (!pageReady
+              ? h('div', { className: 'dsh-wk-note' }, '正在定位原文所在页…')
+              : h(ReaderFrame, {
+                id: s.knowledgeId || '',
+                kbId: s.kbId || '',
+                name: s.doc || s.knowledgeId || '',
+                page: located ? page : 1,
+                needle: located ? (hitQuote || (hitItem ? String(hitItem.content || '') : '')) : '',
+              })))
       : h('div', { className: 'dsh-wk-citetab-b' }, body),
   )
 }

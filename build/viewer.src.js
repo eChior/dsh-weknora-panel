@@ -1,3 +1,4 @@
+import * as __docx from 'docx-preview'
 /**
  * 预览引擎入口：把 @open-file-viewer/core 及其插件暴露到 window，供 client.src.js 使用。
  * 由 build.mjs 用 esbuild 打成 IIFE。
@@ -42,3 +43,7 @@ window.__DSH_WK_VIEWER__ = {
     textPlugin(),
   ],
 }
+
+try {
+  window.__DSH_WK_DOCX__ = { renderAsync: __docx.renderAsync }
+} catch (e) { /* 忽略 */ }

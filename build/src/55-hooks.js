@@ -292,6 +292,7 @@ function usePanelState() {
         // 缩放、翻页、搜索、命中跳页都在里面，比浏览器原生 PDF 多出黄块定位。
         previewBody = h('div', { className: 'dsh-wk-nos' },
           h(ReaderFrame, {
+            id: preview.file.id || '',
             kbId: preview.file.knowledge_base_id || (curKb && curKb.id) || '',
             name: preview.file.title || preview.file.file_name || preview.file.id,
             page: preview.page || 1,

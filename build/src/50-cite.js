@@ -830,6 +830,7 @@ function CiteTabBodyInner(props) {
           !pageReady
             ? h('div', { className: 'dsh-wk-note' }, '正在定位原文所在页…')
             : h(ReaderFrame, {
+              id: s.knowledgeId || '',
               kbId: s.kbId || '',
               name: s.doc || s.knowledgeId || '',
               page: located ? page : 1,

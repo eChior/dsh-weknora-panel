@@ -371,3 +371,62 @@ io.open(dst,'wb').write(old)
 配套两条纪律（照 `sourceLocator.ts`）：
 - **`findInText` 只在唯一命中时返回**。宁可不标，也不要在多个候选里挑一个 —— 以前「整段匹配不上就取前 10 字」正是错在这里。
 - **滚动只动指定容器**（`scrollRectIntoContainer`），不用 `scrollIntoView` —— 后者会滚所有可滚祖先，把整个 DSH 页面顶上去。
+
+---
+
+## 十、白屏的头号成因：组件 render 抛错，React 卸载整棵 root
+
+### 1. 一个未声明的变量 = 纯白，连一行状态字都不剩
+
+**症状**：右侧栏点角标，tab 标题在、内容区**整片纯白**。没有「正在取原文…」，没有红字错误，什么都没有。后端四条路由全 200，CSS 怎么改都没用。
+
+**根因**：`build/src/50-cite.js` 里用了 `hitQuote`，但**整个文件没有它的声明**（某次 `git checkout <commit> -- build` 把 state 声明退回去了，使用它的那行却留着）：
+
+```js
+needle: located ? (hitQuote || (hitItem ? String(hitItem.content || '') : '')) : '',
+```
+
+渲染到这一行抛 `ReferenceError`。**React 18 在没有 ErrorBoundary 时会卸载整棵 root** —— 容器变成空 div，所以是纯白而不是错误提示。
+
+这一行只在 `officeOn && knowledgeId && pageReady` 时执行，所以恰好是「原件加载完成之后」才白；面板预览走 `55-hooks.js` 另一条路，一直是好的 —— 这个不对称正是最容易误导人的地方。
+
+**正确做法**：
+
+- 白屏 + 连状态字都没有 ⇒ **先怀疑 render 抛错，不要先怀疑高度 / CSS / 接口**。
+- 取证：在 shadow root 里挂组件，看 mount 容器的 `childElementCount`。`kids=0` 就是 React 卸载了，不是没画出来。
+- `git checkout` 回退某个文件后，**grep 一遍该文件里所有被引用但没声明的标识符**。跨文件同名变量会让产物的 grep 计数骗过你：`var hq` 在产物里 3 次，其中只有 1 次属于这个文件。
+
+### 2. `try { return h(Child, props) } catch` 是假保护
+
+`h()` 只创建 element，**子组件的 render 还没执行**，错误在 React 提交阶段才抛，try/catch 一个也捕不到。
+
+必须是真正的 ErrorBoundary：
+
+```js
+class CiteBoundary extends React.Component {
+  static getDerivedStateFromError(err) { return { err } }
+  componentDidCatch(err) { console.error(...) }
+  render() { return this.state.err ? h('div', { className: 'dsh-wk-err' }, ...) : this.props.children }
+}
+```
+
+有了它，同类错误以后会显示成一行红字，而不是让人对着白屏猜一下午。
+
+### 3. 量视口高度要防空
+
+`window.innerHeight` 在后台 tab / 未布局的页面里是 **0**，`Math.max(240, 0 - top - 8)` 会把容器钉死成 240px。
+
+```js
+var vh = window.innerHeight || document.documentElement.clientHeight || 0
+if (!vh) return   // 量不到就别设，交回 CSS
+```
+
+### 4. 这次的验证证据（shadow root + 真实视口）
+
+```
+innerH=796  tab=420x787  inlineH=787px  nos=420x748  iframe=420x748
+err=""  docScrollH=781 < innerH=796      <- 无溢出，不会上移
+iframe 内：pages=12 canvas=4 layers=3 ranges=1 marks=0 locateLoaded=function
+```
+
+`ranges=1 / marks=0` = CSS Custom Highlight API 生效（不改 DOM）。

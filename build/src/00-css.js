@@ -188,7 +188,7 @@ var CSS = [
   '.dsh-wk-x{width:20px;height:20px;padding:0;border:none;border-radius:4px;background:transparent;color:#888;font-size:12px;line-height:20px;cursor:pointer;flex-shrink:0}',
   '.dsh-wk-x:hover{background:rgba(0,0,0,.08);color:#333}',
   // ── 右侧边栏「知识库原文」tab ──
-  '.dsh-wk-citetab{display:flex;flex-direction:column;height:100%;max-height:100%;min-height:0;min-width:0;overflow:hidden;box-sizing:border-box;font-size:13px;line-height:1.75;color:var(--dsw-alias-label-primary,#1a1a1a);background:var(--dsw-alias-bg-primary,#fff)}',
+  '.dsh-wk-citetab{display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden;box-sizing:border-box;font-size:13px;line-height:1.75;color:var(--dsw-alias-label-primary,#1a1a1a);background:var(--dsw-alias-bg-primary,#fff)}',
   // 右侧栏 tab 的容器在 DSH 里可能是 auto 高度，height:100% 会塌成 0 → 预览一片白。
   '.dsh-wk-citetab-b>div{min-height:0}',
   '.dsh-wk-citetab-h{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.08));flex-shrink:0}',
@@ -297,6 +297,51 @@ function injectCss() {
   injectStyle(CSS_TAG_ID, CSS, 'dsh-weknora')
   injectStyle('dsh-weknora/viewer.css', window.__DSH_WK_VIEWER_CSS__, 'dsh-weknora')
   injectCiteStyles()
+  // 布局 CSS 也必须进每个 shadowRoot：DSH 的右侧栏跑在 shadow root 里，
+  // 只注 head 的话预览容器一条高度规则都拿不到，内容会被裁成白屏。
+  injectIntoShadowRoots(CSS_TAG_ID, CSS)
+  injectIntoShadowRoots('dsh-weknora/viewer.css', window.__DSH_WK_VIEWER_CSS__ || '')
+}
+
+// 把一份样式补进当前所有 shadowRoot（head 由 injectStyle 负责）。
+function injectIntoShadowRoots(tagId, css) {
+  if (typeof document === 'undefined' || !css) return
+  var seen = weakSet()
+  var stack = [document]
+  var guard = 0
+  while (stack.length && guard++ < 4000) {
+    var node = stack.pop()
+    var all = node.querySelectorAll ? node.querySelectorAll('*') : []
+    for (var i = 0; i < all.length; i++) {
+      var sr = all[i].shadowRoot
+      if (!sr || seen.has(sr)) continue
+      seen.add(sr)
+      putStyle(sr, tagId, css)
+      stack.push(sr)
+    }
+  }
+}
+
+function putStyle(root, tagId, css) {
+  if (!root || !css) return
+  var sel = 'style[data-plugin-css=' + JSON.stringify(tagId) + ']'
+  if (root.querySelector && root.querySelector(sel)) return
+  var tag = document.createElement('style')
+  tag.setAttribute('data-plugin-css', tagId)
+  tag.dataset.plugin = 'dsh-weknora'
+  tag.textContent = css
+  ;(root.head || root).appendChild(tag)
+}
+
+// 就地确保 el 所在的那棵树里有我们的全部样式。
+// 组件挂载时调用 —— 右侧栏的 shadowRoot 可能在 apply 之后才建出来。
+function ensureStylesHere(el) {
+  if (!el || typeof document === 'undefined') return
+  var root = typeof el.getRootNode === 'function' ? el.getRootNode() : document
+  if (!root || root === document) return
+  putStyle(root, CSS_TAG_ID, CSS)
+  putStyle(root, 'dsh-weknora/viewer.css', window.__DSH_WK_VIEWER_CSS__ || '')
+  putStyle(root, 'dsh-weknora/cite.css', CITE_CSS)
 }
 
 // 会话里 agent 回答的角标是 a[href^="dsh-weknora:"]，

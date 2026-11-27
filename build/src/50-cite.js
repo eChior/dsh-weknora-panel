@@ -672,6 +672,24 @@ function citeChainDump() {
   } catch (e) {}
 }
 
+// 子组件 render 阶段抛错时，React 会卸载整棵 root（容器变空 = 白屏）。
+// 必须有真正的 ErrorBoundary 才能把错误显示成一行字。
+class CiteBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { err: null }
+  }
+  static getDerivedStateFromError(err) { return { err } }
+  componentDidCatch(err) { console.error('[dsh-weknora] 原文预览渲染出错：', err) }
+  render() {
+    if (this.state.err) {
+      return h('div', { className: 'dsh-wk-citetab' },
+        h('div', { className: 'dsh-wk-err' }, '打开原文出错：' + String((this.state.err && this.state.err.message) || this.state.err)))
+    }
+    return this.props.children
+  }
+}
+
 function CiteTabBody(props) {
   // 挂载后量两次父链高度（700ms / 2500ms），看哪一层是 auto 高度、PDF 画完后溢出多少
   React.useEffect(function () {
@@ -701,14 +719,9 @@ function CiteTabBody(props) {
       } catch (e) {}
     }
   }, [])
-  // 包一层 try/catch：这个组件在 DSH 的右侧栏里独立渲染，一旦抛错整块就是白屏，
-  // 用户看不到任何线索。这里把异常降级成一段可见的错误文字。
-  try {
-    return h(CiteTabBodyInner, props)
-  } catch (e) {
-    return h('div', { className: 'dsh-wk-citetab' },
-      h('div', { className: 'dsh-wk-err' }, '打开原文出错：' + ((e && e.message) || String(e))))
-  }
+  // 这里必须是 ErrorBoundary，不能是 try/catch：h() 只创建 element，
+  // 子组件 render 阶段抛的错它一个也捕不到，React 会直接卸载整棵 root（= 纯白）。
+  return h(CiteBoundary, null, h(CiteTabBodyInner, props))
 }
 
 function CiteTabBodyInner(props) {
@@ -730,11 +743,40 @@ function CiteTabBodyInner(props) {
   }, [])
   var st = React.useState({ loading: true, error: '', doc: doc, items: [], focusId: chunkId })
   var s = st[0], setS = st[1]
+  // 这条 tab 可能在 apply 之后才创建的 shadowRoot 里，那时 head 的样式进不来。
+  // 挂载即就地补一份，否则容器没有任何高度规则，内容被裁成白屏。
+  var hostRef = React.useRef(null)
+  React.useEffect(function () {
+    try { ensureStylesHere(hostRef.current) } catch (e) { /* 忽略 */ }
+    // 高度不靠父级：DSH 那层 wrapper 的高度可能是 auto，也可能是 0，
+    // height:100% 在两种情况下分别是「撑满内容」和「塌成 0」。
+    // 直接按视口量：底边落在视口内，既不会白屏也不会把文档撑高。
+    function fit() {
+      var el = hostRef.current
+      if (!el) return
+      var vh = window.innerHeight || (document.documentElement && document.documentElement.clientHeight) || 0
+      if (!vh) return // 量不到视口就别钉死高度，交回 CSS
+      var top = el.getBoundingClientRect().top
+      var h = Math.max(240, Math.round(vh - top - 8))
+      el.style.height = h + 'px'
+      el.style.maxHeight = h + 'px'
+    }
+    fit()
+    var t1 = setTimeout(fit, 120)
+    var t2 = setTimeout(fit, 600)
+    window.addEventListener('resize', fit)
+    return function () {
+      clearTimeout(t1); clearTimeout(t2)
+      window.removeEventListener('resize', fit)
+    }
+  }, [])
   // 默认走「文本」：分块拼接 + 命中段标黄，纯 DOM 渲染，不依赖 pdfjs/canvas，
   // 因此不可能白屏。要看排版时点「原件」再切 PDF。
   var ob = React.useState(true); var officeOn = ob[0], setOfficeOn = ob[1]
   // 命中段在 PDF 的第几页 —— 拿到后给 iframe 加 #page=N，直接翻过去
   var pg = React.useState(0); var page = pg[0], setPage = pg[1]
+  // 命中段的引文（WeKnora locator.quote）：比整段 chunk 更准，优先用它标黄
+  var hq = React.useState(''); var hitQuote = hq[0], setHitQuote = hq[1]
   var rd = React.useState(false); var pageReady = rd[0], setPageReady = rd[1]
 
   React.useEffect(function () {
@@ -780,14 +822,14 @@ function CiteTabBodyInner(props) {
     var alive = true
     setPageReady(false)
     api('/pdfpage?id=' + encodeURIComponent(s.knowledgeId) + '&chunk=' + encodeURIComponent(chunkId))
-      .then(function (r) { if (alive && r && r.ok && r.page) setPage(r.page) })
+      .then(function (r) { if (alive && r && r.ok) { if (r.page) setPage(r.page); if (r.quote) setHitQuote(String(r.quote)) } })
       .catch(function () { /* 定位失败就从第一页看 */ })
       .then(function () { if (alive) setPageReady(true) })
     return function () { alive = false }
   }, [officeOn, s.knowledgeId, chunkId])
 
-  if (s.loading) return h('div', { className: 'dsh-wk-citetab' }, h('div', { className: 'dsh-wk-note' }, '正在取原文…'))
-  if (s.error) return h('div', { className: 'dsh-wk-citetab' }, h('div', { className: 'dsh-wk-err' }, s.error))
+  if (s.loading) return h('div', { className: 'dsh-wk-citetab', ref: hostRef }, h('div', { className: 'dsh-wk-note' }, '正在取原文…'))
+  if (s.error) return h('div', { className: 'dsh-wk-citetab', ref: hostRef }, h('div', { className: 'dsh-wk-err' }, s.error))
 
   var body = s.items.length
     ? s.items.map(function (c, i) {
@@ -806,7 +848,7 @@ function CiteTabBodyInner(props) {
 
   // 定位没成功时不传 needle：宁可不标黄，也不要停在第一页乱标一屏黄框
   var located = page > 0
-  return h('div', { className: 'dsh-wk-citetab' },
+  return h('div', { className: 'dsh-wk-citetab', ref: hostRef },
     h('div', { className: 'dsh-wk-citetab-h' },
       h(FileTypeIcon, { type: extOf(s.doc || '') }),
       h('span', { className: 'dsh-wk-citetab-t', title: s.doc }, s.doc || '原文'),

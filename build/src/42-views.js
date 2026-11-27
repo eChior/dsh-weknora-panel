@@ -103,7 +103,14 @@ function DocxView(props) {
       var box = boxRef.current
       if (!alive || !box) return
       box.innerHTML = ''
-      await lib.renderAsync(buf, box, null, { inWrapper: false, breakPages: true })
+      await lib.renderAsync(buf, box, null, {
+        inWrapper: true, ignoreWidth: false, ignoreHeight: true,
+        breakPages: true, renderHeaders: true, renderFooters: true,
+        // 默认 true 会忽略 Word 记录的分页点，整篇渲成一个长 section，
+        // 页眉页脚只在最顶部出现一次。设 false 才会按页断开。
+        ignoreLastRenderedPageBreak: false,
+        className: 'docx',
+      })
       if (!alive) return
       setS({ loading: false, err: '', marks: highlightQuote(box, props.needle) })
     })().catch(function (e) {

@@ -230,7 +230,7 @@ function decorateOneRoot(root) {
 }
 
 function logDiag(evt, data) {
-  if (!window.__DSH_WK_DIAG__) return        // 诊断默认关：控制台设 __DSH_WK_DIAG__ = true 才上报
+  if (window.__DSH_WK_DIAG__ === false) return   // 临时默认开：定位右侧栏白屏
   if (window.__WK_DIAG_BUSY__) return   // 防止「记录日志本身出错 → 又触发错误上报」的递归
   try {
     window.__WK_DIAG_BUSY__ = true
@@ -525,7 +525,7 @@ function ensureCiteTabType(ctx) {
 }
 
 function openCiteInSidebar(ctx, detail) {
-  if (window.__DSH_WK_DIAG__) { try { probeLayout('before-open') } catch (eB) {} }
+  if (window.__DSH_WK_DIAG__ !== false) { try { probeLayout('before-open') } catch (eB) {} }
   try { ensureCiteTabType(ctx) } catch (e0) {}
   try {
     if (!ctx || !ctx.sidebarRight || typeof ctx.sidebarRight.openTab !== 'function') return false
@@ -850,7 +850,7 @@ function CiteTabBodyInner(props) {
 // 前端异常上报：右侧栏白屏时，宿主侧的 ~/.dsh/dsh-weknora-diag.log 会留下堆栈，
 // 不用让用户开开发者工具。
 function installErrorReporter() {
-  if (!window.__DSH_WK_DIAG__) return        // 诊断默认关
+  if (window.__DSH_WK_DIAG__ === false) return   // 临时默认开
   if (typeof window === 'undefined' || window.__WK_ERR_BOUND__) return
   window.__WK_ERR_BOUND__ = true
   window.addEventListener('error', function (ev) {

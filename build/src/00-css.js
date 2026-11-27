@@ -270,7 +270,8 @@ var CSS = [
   '.dsh-wk-docx{display:flex;flex-direction:column;flex:1 1 auto;height:0;min-height:0;overflow:hidden;min-width:0}',
   '.dsh-wk-docxbox{flex:1 1 auto;height:0;min-height:0;overflow:auto;background:#fff;padding:10px 12px}',
   '.dsh-wk-docxbox .docx-wrapper{background:#fff;padding:0;display:block}',
-  '.dsh-wk-docxbox .docx{box-shadow:none;margin:0 auto 14px}',
+  '.dsh-wk-docxbox .docx{box-shadow:none;margin:0 auto 14px;width:auto!important;min-width:0!important;padding-left:16px!important;padding-right:16px!important}',
+  '.dsh-wk-docxbox .docx>header,.dsh-wk-docxbox .docx>footer{width:auto!important;left:16px!important;right:16px!important}',
   // 只留命中处的黄底：docx 自带的段间/表格底色全部抹掉，否则看起来是一堆杂色块
   '.dsh-wk-docxbox *:not(mark){background-color:transparent!important;background-image:none!important}',
   'mark.dsh-wk-hl{background:#ffe58f!important;color:inherit!important;padding:0 1px;border-radius:2px}',

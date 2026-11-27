@@ -293,10 +293,16 @@ var CSS = [
   '.dsh-wk-sheetwrap{flex:1 1 auto;height:0;min-height:0;overflow:auto;padding:8px 10px}',
   '.dsh-wk-sheetone{margin-bottom:16px}',
   '.dsh-wk-sheetname{font-size:12px;font-weight:600;color:#666;margin-bottom:6px}',
-  '.dsh-wk-sheetwrap{min-width:0;max-width:100%;display:flex;flex-direction:column;flex:1 1 auto;min-height:0;overflow:hidden}',
-  '.dsh-wk-sheetone{min-width:0;max-width:100%;display:flex;flex-direction:column;min-height:0}',
+  // 视口兜底：上封顶、下兜底。父级高度是 auto 时 flex:1 会塌成 0（实测 SB=398x0），
+  // 表格被整个裁掉；给了确定盒子之后，滚动条稳定落在可见范围内。
+  '.dsh-wk-sheetwrap{min-width:0;max-width:100%;display:flex;flex-direction:column;height:calc(100vh - 260px);min-height:240px;max-height:calc(100vh - 220px);overflow:hidden}',
+  // sheetone / sheetbox 必须在 flex 链里有界：否则 sheetbox 的高度等于整张表
+  // （几十万像素），横向滚动条画在底部，用户永远看不到，只会觉得「不能左右滚」。
+  '.dsh-wk-sheetone{min-width:0;max-width:100%;display:flex;flex-direction:column;flex:1 1 auto;min-height:120px;overflow:hidden}',
   // overflow-x:scroll 而不是 auto：滚动条常驻，否则用户不知道右边还有列。
-  '.dsh-wk-sheetbox{min-width:0;max-width:100%;overflow:auto;overflow-x:scroll;border:1px solid #e3e3e3;border-radius:4px;max-height:none}',
+  // 用视口封顶，而不是靠祖先链的 flex 高度：DSH 右栏那层高度是 auto，
+  // flex:1 1 auto + min-height:0 会在那里塌成 0（实测 SB=398x0），表格被整个裁掉。
+  '.dsh-wk-sheetbox{min-width:0;max-width:100%;flex:1 1 auto;min-height:120px;max-height:calc(100vh - 260px);overflow:auto;overflow-x:scroll;border:1px solid #e3e3e3;border-radius:4px}',
   '.dsh-wk-sheetbox::-webkit-scrollbar{width:12px;height:12px}',
   '.dsh-wk-sheetbox::-webkit-scrollbar-track{background:#f1f1f1;border-radius:6px}',
   '.dsh-wk-sheetbox::-webkit-scrollbar-thumb{background:#c1c1c1;border-radius:6px}',

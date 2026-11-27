@@ -208,11 +208,9 @@ function SheetView(props) {
 }
 
 // Word 原件：用 docx-preview 直接渲染 docx（不再转 PDF）。
-// Word 原件放 iframe 里渲染：docx-preview 在主进程会卡死事件循环。
+// Word 一律走 PDF：宿主用 LibreOffice 把 docx 转成 PDF，前端用同一套 pdfjs 渲染器，
+// 定位靠 locator 的 quote 找页 + 页内黄块。docx 原生渲染（docx-preview）试过三种方式
+// （内联 / ArrayBuffer / iframe），在你机器上要么卡死要么模块解析失败，不再折腾。
 function DocxView(props) {
-  var src = API + '/docxview?id=' + encodeURIComponent(props.id || '')
-    + '&block=' + encodeURIComponent(String(props.block || 0))
-    + '&quote=' + encodeURIComponent(String(props.quote || ''))
-  return h('div', { className: 'dsh-wk-docxwrap' },
-    h('iframe', { className: 'dsh-wk-docxframe', src: src, title: 'Word 原件' }))
+  return h(PdfView, { id: props.id, page: 0, needle: props.quote || '' })
 }

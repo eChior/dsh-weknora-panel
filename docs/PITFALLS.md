@@ -302,3 +302,72 @@ Remove-Item -LiteralPath '\\?\D:\DSH Work\...\CON' -Force
 | `asar-extract.cjs` | 按路径后缀提取 asar 内文件 |
 
 截图走 `oil_ui_shoot`（浏览器 CDP 在 Web GUI 下不可用）。
+
+---
+
+## 九、照搬 WeKnora 预览逻辑时踩的坑（2026-11-27）
+
+### 34. `var CSS` 遮蔽浏览器全局 `CSS`，Custom Highlight API 永远走回退
+
+**症状**：探测到 `CSS.highlights=object`、`Highlight=function`（API 明明可用），
+但代码还是走了 `<mark>` 包裹分支，`CSS.highlights.has('source-locate')` 恒 false。
+
+**根因**：`build/src/00-css.js` 里有 `var CSS = [...].join('')`。
+所有片段拼进同一个 IIFE，模块作用域的 `CSS` 是**我们自己的样式字符串**，
+把浏览器全局 `CSS` 遮蔽了。`typeof CSS !== 'undefined'` 为真，但 `CSS.highlights` 是 undefined。
+
+**正确做法**：访问浏览器全局一律显式走 `window.`：
+```js
+var css = typeof window !== 'undefined' ? window.CSS : null
+var H = typeof window !== 'undefined' ? window.Highlight : null
+```
+
+**同类前科**：之前写过 `CSS.join('')`，那次是反过来 —— 以为拿到数组，实际拿到 CSSOM 对象。
+**只要 bundle 里有和浏览器全局同名的变量（CSS / name / status / location / top / self…），
+访问全局就必须加 `window.`。**
+
+### 35. `XLSX.utils.sheet_to_html` 返回的是整份 HTML 文档
+
+**症状**：Excel 预览里出现 `<title>SheetJS</title>` 之类的节点，字体测量第一项是 title。
+
+**根因**：`sheet_to_html` 输出 `<html><head><title>SheetJS</title></head><body><table>…`，
+直接 `innerHTML` 会把 head 里的东西一起塞进面板。
+
+**正确做法**：`DOMParser` 解析后**只取 `<table>`**，克隆进一个 div 再序列化。
+WeKnora 那边靠 `sanitizeHTML` 达到同样效果。
+
+### 36. PowerShell `git show … | Set-Content -NoNewline` 会把文件毁成一行
+
+**症状**：为了做对照实验把 HEAD 版 viewer.html 写回工作区，结果 664 行的文件变成 1 行 47135 字节，
+HTML 全挤在一起。
+
+**根因**：PowerShell 管道按**行**传字符串，`-NoNewline` 只是不在末尾补换行，
+行与行之间的分隔全丢了。
+
+**正确做法**：导出 git 里的文件用 python 写**字节**：
+```python
+old = subprocess.run(['git','show','HEAD:path/to/file'], capture_output=True).stdout
+io.open(dst,'wb').write(old)
+```
+
+### 37. harness 的 iframe 里官方 pdf.js viewer 不渲染 —— 是环境局限，不是回归
+
+**症状**：harness 里 PDF 预览 `canvas=0`、`.textLayer=0`、页码框显示 0，
+手动调 `app.pdfViewer.update()` 后立刻出现 4 个 canvas。
+
+**定性方法（对照实验）**：把 `viewer.html` 换回**已知能用的 HEAD 版本**，
+在同一 harness 里同样 `canvas=0`。→ 说明是测试环境的问题，不是本次改动引入的。
+**直接把 viewer.html 当页面打开**（不套 iframe）则一切正常：页码 1、canvas 3、textLayer 3。
+
+**教训**：怀疑自己改坏了之前，先把旧版放回去跑同一个用例。
+没有这个对照，就会去改根本没坏的东西 —— 这正是之前反复「越改越糟」的来源。
+
+### 38. 命中位置不要自己算，WeKnora 入库时已经写好了
+
+`chunk.source_locators`（`internal/types/source_locator.go`）：
+`pdf` 给 `page`/`bbox`、`docx` 给 `block`（1 起的段落序号）、`sheet` 给 `sheet`/`row_start`/`row_end`，
+都带 `quote`。前端只负责按这些坐标去 DOM 里找。
+
+配套两条纪律（照 `sourceLocator.ts`）：
+- **`findInText` 只在唯一命中时返回**。宁可不标，也不要在多个候选里挑一个 —— 以前「整段匹配不上就取前 10 字」正是错在这里。
+- **滚动只动指定容器**（`scrollRectIntoContainer`），不用 `scrollIntoView` —— 后者会滚所有可滚祖先，把整个 DSH 页面顶上去。

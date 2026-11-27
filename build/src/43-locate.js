@@ -186,12 +186,6 @@ function srcFindTextRange(root, quote, index) {
   return srcRangeAt(root, hit, idx)
 }
 
-function srcFindTextRanges(root, quote) {
-  var idx = srcBuildTextIndex(root)
-  return srcFindTextMatches(idx.text, quote)
-    .map(function (hit) { return srcRangeAt(root, hit, idx) })
-    .filter(function (r) { return !!r })
-}
 
 function srcHighlightRegistry() {
   // 必须走 window：本模块所在 bundle 里有个同名的 `var CSS`（样式表字符串），

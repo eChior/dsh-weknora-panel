@@ -430,3 +430,27 @@ iframe 内：pages=12 canvas=4 layers=3 ranges=1 marks=0 locateLoaded=function
 ```
 
 `ranges=1 / marks=0` = CSS Custom Highlight API 生效（不改 DOM）。
+
+## 十一、字符串与定时器
+
+### 11.1 正则里多写一个反斜杠，匹配的东西完全变了
+
+**症状**：`extOf()` 永远返回空串，Excel 一直走「普通 Office → 转 PDF」分支；命中片段的换行和连续空格根本没被压缩，一段能撑很高。
+
+**根因**：本该写 `/\\.([A-Za-z0-9]{1,6})$/`（一个反斜杠转义点），实际写成 `/\\\\.([A-Za-z0-9]{1,6})$/`（两个反斜杠 = 匹配字面反斜杠 + 任意字符），永远不命中。`snippet()` 的 `/\\\\s+/g` 同理，匹配的是「反斜杠 + 一堆 s」。
+
+**正确做法**：写正则时念一遍「这个反斜杠转义的是谁」。`\\.` 是点，`\\\\.` 是反斜杠后跟任意字符。改完用 `node -e` 打一行样例值确认。
+
+**同类**：`fileNameForFile()` 里同一个笔误导致 `a.docx` 被拼成 `a.docx.docx` 交给预览引擎。
+
+**证据**：`tmp/audit-regex.py` 扫出 `40-preview.js:164`；修后 `snippet('a\\n\\nb')` 得到 `a b`。
+
+### 11.2 setInterval 只靠标志位退出，等于永不退出
+
+**症状**：同时开着几个 PDF 预览，CPU 一直有底噪；长时间使用后越来越明显。
+
+**根因**：`viewer-official/web/viewer.html` 的兜底脚本里 `setInterval(kick, 300)` 和 `setInterval(markAll, 700)` 都只靠内部 `done` 标志提前 return —— 函数体不干活了，定时器本身还在跑，每个 iframe 各留一份。
+
+**正确做法**：标志位置位时同时 `clearInterval`；「事情做完了」这种条件（比如标记数连续 5 轮不变）也要能触发清理。写定时器时先想清楚它的退出条件是什么、谁来清。
+
+**证据**：修后 `tickTimer` / `markTimer` 都在 `stopTick()` / `watchMarkIdle()` 里清；`viewer.html` 里 `tickTimer = setInterval(kick, 300)`。

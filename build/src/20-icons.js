@@ -153,10 +153,6 @@ function KbIcon(props) {
   return h(MacFolderIcon, { size: (props && props.size) || 18 })
 }
 
-function ChevGlyph() {
-  return h('svg', { width: 10, height: 10, viewBox: '0 0 10 10', fill: 'none' },
-    h('path', { d: 'M2.5 3.8L5 6.3l2.5-2.5', stroke: 'currentColor', strokeWidth: 1.3, strokeLinecap: 'round', strokeLinejoin: 'round' }))
-}
 
 
 

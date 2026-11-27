@@ -777,6 +777,9 @@ function CiteTabBodyInner(props) {
   var pg = React.useState(0); var page = pg[0], setPage = pg[1]
   // 命中段的引文（WeKnora locator.quote）：比整段 chunk 更准，优先用它标黄
   var hq = React.useState(''); var hitQuote = hq[0], setHitQuote = hq[1]
+  // 文件真实信息（file_name 带扩展名、file_type）。s.doc 是文档标题，
+  // 标题经常没有扩展名 —— 拿它推类型会把 Excel 判成 PDF。
+  var fm = React.useState({}); var fileMeta = fm[0], setFileMeta = fm[1]
   var rd = React.useState(false); var pageReady = rd[0], setPageReady = rd[1]
 
   React.useEffect(function () {
@@ -788,6 +791,9 @@ function CiteTabBodyInner(props) {
       if (!r || !r.ok) throw new Error((r && r.message) || '取不到这段原文')
       var kid = r.knowledge_id || ''
       var kbId = r.knowledge_base_id || ''
+      api('/file?id=' + encodeURIComponent(kid)).then(function (fr) {
+        if (alive && fr && fr.ok && fr.file) setFileMeta(fr.file)
+      }).catch(function () { /* 拿不到就按标题推 */ })
       return api('/text?id=' + encodeURIComponent(kid) + '&kbId=' + encodeURIComponent(kbId)).then(function (t) {
         if (!alive) return
         var items = (t && (t.items || t.chunks)) || []
@@ -848,12 +854,14 @@ function CiteTabBodyInner(props) {
 
   // 定位没成功时不传 needle：宁可不标黄，也不要停在第一页乱标一屏黄框
   var located = page > 0
+  var fileName = fileMeta.file_name || fileMeta.title || ''
+  var fileExt = fileName ? extOf({ file_name: fileName, file_type: fileMeta.file_type }) : extOf(s.doc || '')
   return h('div', { className: 'dsh-wk-citetab', ref: hostRef },
     h('div', { className: 'dsh-wk-citetab-h' },
-      h(FileTypeIcon, { type: extOf(s.doc || '') }),
+      h(FileTypeIcon, { type: fileExt }),
       h('span', { className: 'dsh-wk-citetab-t', title: s.doc }, s.doc || '原文'),
       h('span', { className: 'dsh-wk-spacer' }),
-      s.knowledgeId && OFFICE_TYPES[extOf(s.doc || '')]
+      s.knowledgeId && OFFICE_TYPES[fileExt]
         ? h('button', {
           className: 'dsh-wk-btn' + (officeOn ? ' dsh-wk-actbtn-on' : ''),
           title: officeOn ? '切到分块文本（可复制）' : '用 LibreOffice 原件排版打开',
@@ -875,8 +883,8 @@ function CiteTabBodyInner(props) {
               chunkId: chunkId || '',
               id: s.knowledgeId || '',
               kbId: s.kbId || '',
-              name: s.doc || s.knowledgeId || '',
-              ext: extOf({ file_name: s.doc, title: s.doc }),
+              name: fileName || s.doc || s.knowledgeId || '',
+              ext: fileExt,
               page: located ? page : 1,
               needle: located ? (hitQuote || (hitItem ? String(hitItem.content || '') : '')) : '',
             }))

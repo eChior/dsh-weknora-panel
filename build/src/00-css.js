@@ -278,8 +278,10 @@ var CSS = [
   '.dsh-wk-sheetone{margin-bottom:16px}',
   '.dsh-wk-sheetname{font-size:12px;font-weight:600;color:#666;margin-bottom:6px}',
   '.dsh-wk-sheetbox{overflow:auto;border:1px solid #e3e3e3;border-radius:4px;max-height:none}',
-  '.dsh-wk-sheettable,.dsh-wk-sheetbox table{border-collapse:collapse;font-size:12px;white-space:nowrap}',
-  '.dsh-wk-sheettable td,.dsh-wk-sheetbox td,.dsh-wk-sheetbox th{border:1px solid #ececec;padding:3px 8px;vertical-align:top}',
+  '.dsh-wk-sheettable,.dsh-wk-sheetbox table{border-collapse:collapse;font-size:12px}',
+  // 照 WeKnora document-preview.vue:1703 —— nowrap 必须配 max-width，
+  // 否则一个装了整段制度的单元格就有几千像素宽。
+  '.dsh-wk-sheettable td,.dsh-wk-sheetbox td,.dsh-wk-sheetbox th{border:1px solid #ececec;padding:3px 8px;vertical-align:top;white-space:nowrap;max-width:300px;overflow:hidden;text-overflow:ellipsis;box-sizing:border-box}',
   '.dsh-wk-sheethead{background:#f5f7fa!important;font-weight:600}',
 ].join('')
 

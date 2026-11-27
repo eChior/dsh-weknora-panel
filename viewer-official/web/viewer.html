@@ -694,13 +694,52 @@ mark.source-locate-mark {
     }, 160)
   }
 
+  /* 兜底：自己把初始视图设好。
+     官方 open() 把 setInitialView(hash) 和 pdfViewer.update() 都排在
+     Promise.all([animationStarted, …]) 之后，而 animationStarted 只靠一次
+     requestAnimationFrame（viewer.mjs:399）。iframe 在后台、或所在窗口没被真正绘制时，
+     浏览器不派动画帧 → 那句永不 resolve → #zoom=page-width 不生效、canvas 不画，
+     用户看到的就是「PDF 一直在加载」。这里全程用 setTimeout，不依赖 rAF。
+     官方路径正常时会先把 isInitialViewSet 置 true，本兜底随即退出。 */
+  var waited = 0   // 等文档就绪：最多 3 分钟
+  var tries = 0    // 真正尝试设置：最多 60 次
+  var done = false
+  function kick() {
+    if (done) return
+    var app = window.PDFViewerApplication
+    var pv = app && app.pdfViewer
+    if (!pv || !pv.pagesCount) { if (++waited > 600) done = true; return }
+    if (app.isInitialViewSet) { done = true; return }
+    if (++tries > 60) { done = true; return }
+    var page = 1
+    var zoom = 'page-width'
+    try {
+      var hp = new URLSearchParams(location.hash.substring(1))
+      page = parseInt(hp.get('page') || '1', 10) || 1
+      zoom = hp.get('zoom') || 'page-width'
+      if (zoom.indexOf(',') > 0) zoom = zoom.split(',')[0]
+    } catch (e) {}
+    // 注意：currentScaleValue 的 setter 内部会 dispatch scalechanged，
+    // 有些事件处理器会 serialize PDFDocumentLoadingTask（循环引用）而抛错。
+    // 值其实已经设上了，所以这里不吞完就算，最后用读回来的值判定成功。
+    try { pv.currentScaleValue = zoom } catch (e) {}
+    try { if (page > 1 && pv.currentPageNumber !== page) pv.currentPageNumber = page } catch (e) {}
+    try { pv.update() } catch (e) {}
+    if (String(pv.currentScaleValue) === String(zoom) && tries > 1) done = true
+    if (tries === 1) setTimeout(markAll, 400)
+  }
+
   function start() {
     var app = window.PDFViewerApplication
     if (app && app.eventBus) {
       app.eventBus.on('textlayerrendered', function () { setTimeout(markAll, 60) })
       app.eventBus.on('pagerendered', function () { setTimeout(markAll, 120) })
+      app.eventBus.on('pagesinit', function () { setTimeout(kick, 80) })
+      app.eventBus.on('pagesloaded', function () { setTimeout(kick, 80) })
     }
+    setInterval(kick, 300)
     setInterval(markAll, 700)
+    kick()
     markAll()
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start)

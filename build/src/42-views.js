@@ -272,6 +272,10 @@ function SheetView(props) {
 
   function effectiveZoom() {
     if (zoom > 0) return zoom
+    // 默认 100%：13 列的表格缩到「适合宽度」只有 35%，字看不清。
+    return 1
+  }
+  function fitSheetZoom() {
     var box = boxRef.current
     if (!box || !natW) return 1
     return Math.max(0.25, Math.min(1, (box.clientWidth - 10) / natW))
@@ -297,7 +301,7 @@ function SheetView(props) {
       h('button', {
         className: 'dsh-wk-zbtn dsh-wk-zbtn-w',
         title: '适合宽度',
-        onClick: function () { setZoom(0) },
+        onClick: function () { setZoom(fitSheetZoom()) },
       }, Math.round(z * 100) + '%'),
       h('button', { className: 'dsh-wk-zbtn', title: '放大', onClick: function () { setZoom(Math.min(3, z + 0.15)) } }, '＋')),
     s.sheets.map(function (sh, si) {

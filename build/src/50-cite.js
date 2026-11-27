@@ -720,6 +720,9 @@ function CiteTabBodyInner(props) {
     return function () { window.removeEventListener('dsh-weknora:open-cite', onOpen) }
   }, [])
   var st = React.useState({ loading: true, error: '', doc: doc, items: [], focusId: chunkId })
+  // 侧栏宽度有限，Word / Excel 挤在里面看不清。放大：同一份预览占满整窗。
+  var bigSt = React.useState(false)
+  var big = bigSt[0], setBig = bigSt[1]
   var s = st[0], setS = st[1]
   // 这条 tab 可能在 apply 之后才创建的 shadowRoot 里，那时 head 的样式进不来。
   // 挂载即就地补一份，否则容器没有任何高度规则，内容被裁成白屏。
@@ -849,6 +852,27 @@ function CiteTabBodyInner(props) {
   var located = page > 0
   var fileName = fileMeta.file_name || fileMeta.title || ''
   var fileExt = fileName ? extOf({ file_name: fileName, file_type: fileMeta.file_type }) : extOf(s.doc || '')
+
+  // 放大模式：同一份 fileView，只是换成整窗容器。关掉还是回侧栏那一份。
+  if (big && officeOn && s.knowledgeId) {
+    return h('div', { className: 'dsh-wk-big' },
+      h('div', { className: 'dsh-wk-big-h' },
+        h(FileTypeIcon, { type: fileExt }),
+        h('span', { className: 'dsh-wk-big-t', title: s.doc }, s.doc || fileName || '原文'),
+        h('span', { className: 'dsh-wk-spacer' }),
+        h('button', { className: 'dsh-wk-x', title: '回到侧栏', onClick: function () { setBig(false) } }, '✕')),
+      h('div', { className: 'dsh-wk-big-b' },
+        fileView({
+          chunkId: chunkId || '',
+          id: s.knowledgeId || '',
+          kbId: s.kbId || '',
+          name: fileName || s.doc || s.knowledgeId || '',
+          ext: fileExt,
+          page: pageReady && located ? page : 1,
+          needle: pageReady && located ? (hitQuote || (hitItem ? String(hitItem.content || '') : '')) : '',
+        })))
+  }
+
   return h('div', { className: 'dsh-wk-citetab', ref: hostRef },
     h('div', { className: 'dsh-wk-citetab-h' },
       h(FileTypeIcon, { type: fileExt }),
@@ -862,6 +886,13 @@ function CiteTabBodyInner(props) {
         }, officeOn ? '看文本' : '原件')
         : null,
       h('span', { className: 'dsh-wk-badge' }, s.items.length + ' 段'),
+      s.knowledgeId && officeOn
+        ? h('button', {
+          className: 'dsh-wk-btn',
+          title: '放大到整窗查看',
+          onClick: function () { setBig(true) },
+        }, '放大')
+        : null,
       h('button', {
         className: 'dsh-wk-x',
         title: '关闭原文（收起右侧栏）',

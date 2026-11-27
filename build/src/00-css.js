@@ -22,21 +22,6 @@ var API = '/api/weknora'
 
 // ── 样式 ─────────────────────────────────────────────────
 var CSS = [
-  '.dsh-wk-docxbox *:not(.dsh-wk-hl){background-color:transparent!important;background-image:none!important}',
-  '.dsh-wk-docxbox .dsh-wk-hl,.dsh-wk-docxbox mark.dsh-wk-hl{background-color:rgba(255,214,10,.45)!important;color:inherit!important}',
-  '.dsh-wk-docxwrap{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column}',
-  '.dsh-wk-docxbox{flex:1;min-height:0;overflow:auto;background:#f5f5f5;padding:8px}',
-  '.dsh-wk-docxbox .docx-wrapper{background:transparent;padding:0}',
-  '.dsh-wk-docxbox .docx-wrapper>section.docx{box-shadow:0 1px 4px rgba(0,0,0,.12);margin:0 auto 12px;background:#fff}',
-  '.dsh-wk-hl{background:rgba(255,214,10,.45);padding:0 1px;border-radius:2px}',
-  '.dsh-wk-sheetwrap{flex:1;min-height:0;overflow:auto;padding:0 0 8px}',
-  '.dsh-wk-sheetone{margin:0 0 14px}',
-  '.dsh-wk-sheetname{font-size:12px;opacity:.7;margin:0 0 6px}',
-  '.dsh-wk-sheetbox{overflow:auto;border:1px solid rgba(0,0,0,.1);border-radius:4px;max-height:60vh}',
-  '.dsh-wk-sheettable{border-collapse:collapse;font-size:12px;line-height:1.5}',
-  '.dsh-wk-sheettable td{border:1px solid rgba(0,0,0,.08);padding:3px 8px;white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis}',
-  '.dsh-wk-sheettable tr:nth-child(even) td{background:rgba(0,0,0,.015)}',
-  '.dsh-wk-sheethead{font-weight:600;background:rgba(0,0,0,.04)!important}',
   '.dsh-wk-root{display:flex;flex-direction:column;height:100%;max-height:100%;min-height:0;overflow:hidden;font-size:var(--dsw-font-base-font-size,14px);line-height:1.65;color:var(--dsw-alias-label-primary,#1a1a1a);background:var(--dsw-alias-bg-primary,#fff);font-family:var(--dsw-font-family,inherit)}',
   '.dsh-wk-head{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.08));flex-shrink:0}',
   '.dsh-wk-title{font-size:1.08em;font-weight:500}',
@@ -281,7 +266,7 @@ var CSS = [
   '.dsh-wk-ans th,.dsh-wk-ans td{border:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.12));padding:5px 8px;text-align:left;vertical-align:top}',
   '.dsh-wk-ans th{background:var(--dsw-alias-bg-secondary,#f7f9fc);font-weight:600}',
   '.dsh-wk-ans h1,.dsh-wk-ans h2,.dsh-wk-ans h3,.dsh-wk-ans h4{font-size:1em;margin:14px 0 6px}',
-  '.dsh-wk-reader-frame{display:block;width:100%;height:100%;min-height:0;border:0;background:#fff;border-radius:4px}',
+  '.dsh-wk-reader-frame{width:100%;height:100%;min-height:420px;border:0;background:#fff;border-radius:4px}',
 ].join('')
 
 var CSS_TAG_ID = 'dsh-weknora/panel.css'

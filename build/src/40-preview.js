@@ -134,7 +134,7 @@ var MEDIA_TYPES = { mp3: 1, wav: 1, m4a: 1, ogg: 1, aac: 1, flac: 1, mp4: 1, web
 function extOf(f) {
   if (!f) return ''
   var n = String(f.file_name || f.title || '')
-  var m = /\.([A-Za-z0-9]{1,6})$/.exec(n)
+  var m = /\\.([A-Za-z0-9]{1,6})$/.exec(n)
   if (m) return m[1].toLowerCase()
   return String(f.file_type || '').toLowerCase()
 }
@@ -148,7 +148,7 @@ function previewKindOf(f) {
 /** 给预览引擎一个带扩展名的文件名（WeKnora 的 file_name 本来就有，兜底时才补） */
 function fileNameForFile(f) {
   var n = String((f && (f.file_name || f.title)) || '')
-  if (/\.([A-Za-z0-9]{1,6})$/.test(n)) return n
+  if (/\\.([A-Za-z0-9]{1,6})$/.test(n)) return n
   var ext = extOf(f)
   return ext ? n + '.' + ext : n
 }
@@ -173,50 +173,3 @@ function snippet(text, limit) {
 // 这里把它渲染成可点角标，点开就是那一段的逐字原文（和 WeKnora 网页端一致）。
 
 // 问答区：直接用 WeKnora 的接口渲染（不自造数据层）。
-
-// 表格预览：宿主用 xlsx 把文件解析成二维数组，这里渲染成 HTML 表格。
-// 不转 PDF —— 表格转 PDF 后列宽丢失、跨页错行，基本没法看。
-function SheetView(props) {
-  var st = React.useState({ loading: true })
-  var s = st[0], setS = st[1]
-  React.useEffect(function () {
-    var alive = true
-    api('/sheet?id=' + encodeURIComponent(props.id || ''))
-      .then(function (r) {
-        if (!alive) return
-        if (r && r.ok) setS({ loading: false, sheets: r.sheets || [] })
-        else setS({ loading: false, error: (r && r.message) || '读不到表格' })
-      })
-      .catch(function (e) { if (alive) setS({ loading: false, error: String((e && e.message) || e) }) })
-    return function () { alive = false }
-  }, [props.id])
-  if (s.loading) return h('div', { className: 'dsh-wk-note' }, '正在读表格…')
-  if (s.error) return h('div', { className: 'dsh-wk-err' }, s.error)
-  if (!s.sheets || !s.sheets.length) return h('div', { className: 'dsh-wk-note' }, '这个表格里没有可显示的内容')
-  return h('div', { className: 'dsh-wk-sheetwrap' },
-    s.sheets.map(function (sh, si) {
-      return h('div', { key: si, className: 'dsh-wk-sheetone' },
-        h('div', { className: 'dsh-wk-sheetname' }, String(sh.name || ('Sheet' + (si + 1))) + ' · ' + (sh.totalRows || sh.rows.length) + ' 行'),
-        h('div', { className: 'dsh-wk-sheetbox' },
-          h('table', { className: 'dsh-wk-sheettable' },
-            h('tbody', null, (sh.rows || []).map(function (r, ri) {
-              return h('tr', { key: ri }, (r || []).map(function (cell, ci) {
-                return h('td', { key: ci, className: ri === 0 ? 'dsh-wk-sheethead' : '' }, cell)
-              }))
-            })))))
-    }))
-}
-
-// Word 原件：用 docx-preview 直接渲染 docx（不再转 PDF）。
-// 好处是能按 locator 的 block（第 N 段）精确定位，段落内再用 quote 标黄。
-function DocxView(props) {
-  // Word 用官方 pdf.js viewer 打开（和 PDF 同一个阅读器：工具栏、翻页、缩放、页宽自适应）。
-  // 宿主先把 docx 转成 PDF，这里只负责把 file 地址拼好 + 带上命中引文。
-  return h(ReaderFrame, {
-    id: props.id,
-    kbId: props.kbId || '',
-    name: props.name || '',
-    page: props.page || 1,
-    needle: props.quote || '',
-  })
-}

@@ -288,7 +288,7 @@ function usePanelState() {
       // 换成 iframe 会带上浏览器自带的「上一页/下一页」工具条，样式也不一致。
       if (previewIsDocx) {
         previewBody = h('div', { className: 'dsh-wk-nos' },
-          h(DocxView, { id: preview.file.id, block: preview.block || 0, quote: preview.focusContent || '' }))
+          h(DocxView, { id: preview.file.id, kbId: preview.file.knowledge_base_id || (curKb && curKb.id) || '', name: preview.file.title || preview.file.file_name || preview.file.id, block: preview.block || 0, quote: preview.focusContent || '' }))
       } else if (previewIsSheet) {
         // 表格直接渲染成真表格：宿主用 xlsx 解析，列宽/行号都保得住。
         previewBody = h('div', { className: 'dsh-wk-nos' }, h(SheetView, { id: preview.file.id }))

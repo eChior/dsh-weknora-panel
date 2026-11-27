@@ -210,6 +210,13 @@ function SheetView(props) {
 // Word 原件：用 docx-preview 直接渲染 docx（不再转 PDF）。
 // 好处是能按 locator 的 block（第 N 段）精确定位，段落内再用 quote 标黄。
 function DocxView(props) {
-  // Word 统一走 PDF（用户拍板）：宿主 LibreOffice 转 PDF，前端 pdfjs 渲染 + quote 找页标黄。
-  return h(PdfView, { id: props.id, page: 0, needle: props.quote || '' })
+  // Word 用官方 pdf.js viewer 打开（和 PDF 同一个阅读器：工具栏、翻页、缩放、页宽自适应）。
+  // 宿主先把 docx 转成 PDF，这里只负责把 file 地址拼好 + 带上命中引文。
+  return h(ReaderFrame, {
+    id: props.id,
+    kbId: props.kbId || '',
+    name: props.name || '',
+    page: props.page || 1,
+    needle: props.quote || '',
+  })
 }

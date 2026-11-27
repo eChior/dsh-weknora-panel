@@ -885,6 +885,8 @@ function CiteTabBodyInner(props) {
             // Word：直接渲染 docx 原件，按 locator 的 block（第 N 段）精确跳过去
             ? h(DocxView, {
               id: s.knowledgeId,
+              kbId: s.kbId || '',
+              name: s.doc || s.knowledgeId || '',
               block: hitBlock || 0,
               quote: hitQuote || (hitItem ? String(hitItem.content || '') : ''),
             })

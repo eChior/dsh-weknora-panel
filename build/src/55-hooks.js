@@ -286,6 +286,7 @@ function usePanelState() {
         // Excel 走 SheetView（xlsx 解析成真表格），Word 走 DocxView（docx-preview 保留排版），
         // 都不再先转 PDF —— 转出来的表格/Word 丢了列宽和分页，看着像截图。
         previewBody = fileView({
+          chunkId: preview.focusId || '',
           id: preview.file.id || '',
           kbId: preview.file.knowledge_base_id || (curKb && curKb.id) || '',
           name: preview.file.title || preview.file.file_name || preview.file.id,
@@ -297,6 +298,7 @@ function usePanelState() {
         // 和右侧栏用同一个阅读器（paper-reader 的 pdf.js 页面）：
         // 缩放、翻页、搜索、命中跳页都在里面，比浏览器原生 PDF 多出黄块定位。
         previewBody = fileView({
+          chunkId: preview.focusId || '',
           id: preview.file.id || '',
           kbId: preview.file.knowledge_base_id || (curKb && curKb.id) || '',
           name: preview.file.title || preview.file.file_name || preview.file.id,

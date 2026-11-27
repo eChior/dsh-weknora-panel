@@ -270,8 +270,7 @@ var CSS = [
   '.dsh-wk-docx{display:flex;flex-direction:column;flex:1 1 auto;height:0;min-height:0;overflow:hidden;min-width:0}',
   '.dsh-wk-docxbox{flex:1 1 auto;height:0;min-height:0;overflow:auto;background:#fff;padding:10px 12px}',
   '.dsh-wk-docxbox .docx-wrapper{background:#fff;padding:0;display:block}',
-  '.dsh-wk-docxbox .docx{box-shadow:none;margin:0 auto 14px;width:auto!important;min-width:0!important;padding-left:16px!important;padding-right:16px!important}',
-  '.dsh-wk-docxbox .docx>header,.dsh-wk-docxbox .docx>footer{width:auto!important;left:16px!important;right:16px!important}',
+  '.dsh-wk-docxbox .docx{box-shadow:none;margin:0 auto 14px}',
   // 只留命中处的黄底：docx 自带的段间/表格底色全部抹掉，否则看起来是一堆杂色块
   '.dsh-wk-docxbox *:not(mark){background-color:transparent!important;background-image:none!important}',
   'mark.dsh-wk-hl{background:#ffe58f!important;color:inherit!important;padding:0 1px;border-radius:2px}',
@@ -279,8 +278,8 @@ var CSS = [
   '.dsh-wk-sheetone{margin-bottom:16px}',
   '.dsh-wk-sheetname{font-size:12px;font-weight:600;color:#666;margin-bottom:6px}',
   '.dsh-wk-sheetbox{overflow:auto;border:1px solid #e3e3e3;border-radius:4px;max-height:none}',
-  '.dsh-wk-sheettable{border-collapse:collapse;font-size:12px;white-space:nowrap}',
-  '.dsh-wk-sheettable td{border:1px solid #ececec;padding:3px 8px;vertical-align:top}',
+  '.dsh-wk-sheettable,.dsh-wk-sheetbox table{border-collapse:collapse;font-size:12px;white-space:nowrap}',
+  '.dsh-wk-sheettable td,.dsh-wk-sheetbox td,.dsh-wk-sheetbox th{border:1px solid #ececec;padding:3px 8px;vertical-align:top}',
   '.dsh-wk-sheethead{background:#f5f7fa!important;font-weight:600}',
 ].join('')
 
@@ -306,6 +305,16 @@ var CITE_CSS = [
   'a[href^="dsh-weknora:"]{display:inline-block;min-width:15px;height:15px;padding:0 3px;margin:0 2px;border-radius:8px;background:#e7f0fd;color:#2b6cb0!important;font-size:10px;font-weight:700;line-height:15px;text-align:center;text-decoration:none!important;vertical-align:super;position:relative;top:-.15em;cursor:pointer;font-family:inherit;font-style:normal}',
   'a[href^="dsh-weknora:"]:hover{background:#d3e5fb;color:#1e4e8c!important}',
   'a[href^="dsh-weknora:"]:visited{color:#2b6cb0!important}',
+  // 命中高亮：照 WeKnora document-preview.vue 的非 scoped 样式段。
+  // 优先走 CSS Custom Highlight API（不改 DOM），色值取 theme.css 亮色主题。
+  '::highlight(source-locate){background-color:rgba(250,204,75,.34)}',
+  'mark.source-locate-mark{background-color:rgba(250,204,75,.34);color:inherit;border-radius:2px;box-decoration-break:clone;-webkit-box-decoration-break:clone}',
+  '.source-locate-block{background-color:rgba(250,204,75,.09)!important;box-shadow:inset 3px 0 rgba(183,130,22,.5)}',
+  // 单元格自己的底色会盖住整行的标记，所以逐格上色，强调只留在首列左侧。
+  'tr.source-locate-block{background-color:transparent!important;box-shadow:none}',
+  'tr.source-locate-block>td{background-color:rgba(250,204,75,.09)!important}',
+  'tr.source-locate-block>td:first-child{box-shadow:inset 3px 0 rgba(183,130,22,.5)}',
+  'img.source-locate-block{outline:1px solid rgba(183,130,22,.5);outline-offset:2px}',
 ].join('')
 
 function injectCiteStyles() {

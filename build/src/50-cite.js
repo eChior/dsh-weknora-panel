@@ -796,6 +796,7 @@ function CiteTabBodyInner(props) {
       if (!r || !r.ok) throw new Error((r && r.message) || '取不到这段原文')
       var kid = r.knowledge_id || ''
       var kbId = r.knowledge_base_id || ''
+      if (r.doc) setDoc(String(r.doc))   // 文件名决定原件用哪个渲染器（docx / 表格 / PDF）
       return api('/text?id=' + encodeURIComponent(kid) + '&kbId=' + encodeURIComponent(kbId)).then(function (t) {
         if (!alive) return
         var items = (t && (t.items || t.chunks)) || []
@@ -877,7 +878,10 @@ function CiteTabBodyInner(props) {
     ),
     officeOn && s.knowledgeId
       ? h('div', { className: 'dsh-wk-citetab-b dsh-wk-nos' },
-          /^(docx|doc|odt|rtf)$/i.test(extOf({ title: s.doc || '', file_name: s.doc || '', file_type: s.fileType || '' }) || '')
+          /^(xls|xlsx|xlsm|xlsb|ods|csv|tsv)$/i.test(extOf({ title: s.doc || '', file_name: s.doc || '', file_type: s.fileType || '' }) || '')
+            // 表格：右栏也渲染成表格，别转 PDF（转了就是「看不出是 Excel」）
+            ? h(SheetView, { id: s.knowledgeId })
+            : /^(docx|doc|odt|rtf)$/i.test(extOf({ title: s.doc || '', file_name: s.doc || '', file_type: s.fileType || '' }) || '')
             // Word：直接渲染 docx 原件，按 locator 的 block（第 N 段）精确跳过去
             ? h(DocxView, {
               id: s.knowledgeId,

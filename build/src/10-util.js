@@ -153,32 +153,30 @@ function scrollIntoBox(el, block) {
   box.scrollTop = Math.max(0, next)
 }
 
-// 在某个元素里按引文标黄：整段匹配优先，退化成 12 字滑窗。
+// 在某个元素里按引文标黄：只标「第一处命中」，且只标命中的那几个字。
+// 之前的写法是对每个覆盖范围的文本节点整节点 surroundContents，
+// 一旦引文跨节点就会冒出好几块、effect 重跑还会层层嵌套（看起来就是「重叠的深黄色块」）。
 function highlightQuote(root, quote) {
   try {
     if (!root) return 0
-    // 先清掉上一轮的标记：effect 重跑会重复包裹，旧的堆积起来就是「重叠的深黄色块」
+    // 先清掉上一次的标记，避免重复执行时越包越深
     var olds = root.querySelectorAll('mark.dsh-wk-hl')
     for (var oi = 0; oi < olds.length; oi++) {
       var om = olds[oi]
       var pn = om.parentNode
-      if (pn) {
-        while (om.firstChild) pn.insertBefore(om.firstChild, om)
-        pn.removeChild(om)
-        if (pn.normalize) pn.normalize()
-      }
+      if (pn) { while (om.firstChild) pn.insertBefore(om.firstChild, om); pn.removeChild(om); if (pn.normalize) pn.normalize() }
     }
     var needle = String(quote || '').replace(/\s+/g, '')
     if (needle.length < 6) return 0
     var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null)
     var nodes = []
     var full = ''
-    var starts = []
+    var pos = []
     var n
     while ((n = walker.nextNode())) {
       if (!n.nodeValue || !n.nodeValue.trim()) continue
       nodes.push(n)
-      starts.push(full.length)
+      pos.push({ off: full.length, len: n.nodeValue.replace(/\s+/g, '').length })
       full += n.nodeValue.replace(/\s+/g, '')
     }
     var at = full.indexOf(needle)
@@ -189,23 +187,26 @@ function highlightQuote(root, quote) {
       len = probe.length
     }
     if (at < 0) return 0
-    // 只标第一处命中，且在单个文本节点内精确切三段（避免跨节点时冒出好几块）
+    // 找到第一个覆盖 at 的文本节点，在它内部精确切三段
     for (var i = 0; i < nodes.length; i++) {
-      var st = starts[i]
-      var plain = nodes[i].nodeValue
-      var plainLen = plain.replace(/\s+/g, '').length
-      if (st + plainLen <= at) continue
+      var st = pos[i].off
+      var en = st + pos[i].len
+      if (en <= at) continue
       if (st > at) break
+      var tn = nodes[i]
+      var plain = tn.nodeValue
+      // 原文里的空白会让「去空白偏移」和真实偏移不一致，这里按比例粗对齐后本地再找
       var localAt = Math.max(0, at - st)
+      var localText = plain.slice(localAt, localAt + len)
       var idx = localAt
-      var want = needle.slice(0, Math.min(len, Math.max(2, plainLen - localAt)))
-      if (plain.slice(idx, idx + want.length).replace(/\s+/g, '') !== want.replace(/\s+/g, '')) {
-        var found = plain.indexOf(needle.slice(0, Math.min(12, needle.length)))
-        if (found >= 0) idx = found
+      if (plain.slice(localAt, localAt + len).replace(/\s+/g, '') !== needle.slice(0, len).replace(/\s+/g, '')) {
+        var probe2 = needle.slice(0, Math.min(12, needle.length))
+        var found = plain.indexOf(probe2)
+        if (found >= 0) { idx = found; localText = plain.slice(found, found + len) }
       }
-      var endIdx = Math.min(plain.length, idx + Math.max(2, want.length))
+      var endIdx = Math.min(plain.length, idx + Math.max(2, localText.length))
       try {
-        var mid = nodes[i].splitText(idx)
+        var mid = tn.splitText(idx)
         mid.splitText(endIdx - idx)
         var mark = document.createElement('mark')
         mark.className = 'dsh-wk-hl'

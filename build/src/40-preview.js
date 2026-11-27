@@ -210,42 +210,6 @@ function SheetView(props) {
 // Word 原件：用 docx-preview 直接渲染 docx（不再转 PDF）。
 // 好处是能按 locator 的 block（第 N 段）精确定位，段落内再用 quote 标黄。
 function DocxView(props) {
-  var boxRef = React.useRef(null)
-  var st = React.useState({ loading: true })
-  var s = st[0], setS = st[1]
-  React.useEffect(function () {
-    var alive = true
-    var el = boxRef.current
-    if (!el) return undefined
-    el.innerHTML = ''
-    setS({ loading: true })
-    fetch(API + '/content?id=' + encodeURIComponent(props.id || ''))
-      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob() })
-      .then(function (blob) {
-        var lib = window.__DSH_WK_DOCX__
-        if (!lib || typeof lib.renderAsync !== 'function') throw new Error('docx 渲染器没有加载（重启后重试）')
-        return lib.renderAsync(blob, el, null, { inWrapper: true, ignoreWidth: false, ignoreHeight: true, breakPages: false, className: 'dsh-wk-docx' })
-      })
-      .then(function () { if (alive) setS({ loading: false }) })
-      .catch(function (e) { if (alive) setS({ loading: false, error: String((e && e.message) || e) }) })
-    return function () { alive = false }
-  }, [props.id])
-  React.useEffect(function () {
-    if (s.loading || s.error) return
-    var el = boxRef.current
-    if (!el) return
-    var blocks = []
-    var wrap = el.querySelector('.docx-wrapper')
-    var host = wrap || el
-    for (var i = 0; i < host.children.length; i++) blocks.push(host.children[i])
-    if (!blocks.length) return
-    var b = Number(props.block) || 0
-    var target = b > 0 && blocks[b - 1] ? blocks[b - 1] : blocks[0]
-    if (props.quote) highlightQuote(target, String(props.quote))
-    try { target.scrollIntoView({ block: 'center' }) } catch (e) { /* 忽略 */ }
-  }, [s.loading, s.error, props.block, props.quote])
-  if (s.loading) return h('div', { className: 'dsh-wk-note' }, '正在渲染 Word 原件…')
-  return h('div', { className: 'dsh-wk-docxwrap' },
-    s.error ? h('div', { className: 'dsh-wk-err' }, s.error) : null,
-    h('div', { className: 'dsh-wk-docxbox', ref: boxRef }))
+  // Word 统一走 PDF（用户拍板）：宿主 LibreOffice 转 PDF，前端 pdfjs 渲染 + quote 找页标黄。
+  return h(PdfView, { id: props.id, page: 0, needle: props.quote || '' })
 }

@@ -219,6 +219,10 @@ function SheetView(props) {
   var st = React.useState({ loading: true })
   var s = st[0], setS = st[1]
   var undoRef = React.useRef(null)
+  var zs = React.useState(0)            // 0 = 适合宽度
+  var zoom = zs[0], setZoom = zs[1]
+  var zw = React.useState(0)            // 表格原始宽度，用来算适合宽度
+  var natW = zw[0], setNatW = zw[1]
 
   // 表格数据只看文件 id：同一张表换角标位置不重新取、不重建表格。
   React.useEffect(function () {
@@ -253,10 +257,45 @@ function SheetView(props) {
     return function () { alive = false }
   }, [s.sheets, props.chunkId])
 
+  // 表格进 DOM 后量一次原始宽度（表格是 nowrap 的，宽度不随容器变）。
+  React.useEffect(function () {
+    if (!s.sheets || !s.sheets.length) return
+    var box = boxRef.current
+    if (!box) return
+    var t = box.querySelector('.dsh-wk-sheetbox table')
+    if (t && t.scrollWidth) setNatW(t.scrollWidth)
+  }, [s.sheets])
+
+  function effectiveZoom() {
+    if (zoom > 0) return zoom
+    var box = boxRef.current
+    if (!box || !natW) return 1
+    return Math.max(0.25, Math.min(1, (box.clientWidth - 10) / natW))
+  }
+  var z = effectiveZoom()
+
+  // zoom 走 CSS zoom：它参与布局，滚动范围会跟着变，不用手算容器高度。
+  React.useEffect(function () {
+    var box = boxRef.current
+    if (!box) return
+    var boxes = box.querySelectorAll('.dsh-wk-sheetbox')
+    for (var i = 0; i < boxes.length; i++) {
+      try { boxes[i].style.zoom = String(z) } catch (e) { /* 忽略 */ }
+    }
+  }, [z, s.sheets])
+
   if (s.loading) return h('div', { className: 'dsh-wk-note' }, '正在读表格…')
   if (s.error) return h('div', { className: 'dsh-wk-err' }, s.error)
   if (!s.sheets || !s.sheets.length) return h('div', { className: 'dsh-wk-note' }, '这个表格里没有可显示的内容')
   return h('div', { className: 'dsh-wk-sheetwrap', ref: boxRef },
+    h('div', { className: 'dsh-wk-pdfbar' },
+      h('button', { className: 'dsh-wk-zbtn', title: '缩小', onClick: function () { setZoom(Math.max(0.25, z - 0.15)) } }, '−'),
+      h('button', {
+        className: 'dsh-wk-zbtn dsh-wk-zbtn-w',
+        title: '适合宽度',
+        onClick: function () { setZoom(0) },
+      }, Math.round(z * 100) + '%'),
+      h('button', { className: 'dsh-wk-zbtn', title: '放大', onClick: function () { setZoom(Math.min(3, z + 0.15)) } }, '＋')),
     s.sheets.map(function (sh, si) {
       return h('div', { key: si, className: 'dsh-wk-sheetone' },
         s.sheets.length > 1 ? h('div', { className: 'dsh-wk-sheetname' }, String(sh.name || ('Sheet' + (si + 1)))) : null,

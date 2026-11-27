@@ -870,17 +870,18 @@ function CiteTabBodyInner(props) {
     ),
     officeOn && s.knowledgeId
       ? h('div', { className: 'dsh-wk-citetab-b dsh-wk-nos' },
-          !pageReady
-            ? h('div', { className: 'dsh-wk-note' }, '正在定位原文所在页…')
-            : fileView({
-              chunkId: chunkId || '',
-              id: s.knowledgeId || '',
-              kbId: s.kbId || '',
-              name: fileName || s.doc || s.knowledgeId || '',
-              ext: fileExt,
-              page: located ? page : 1,
-              needle: located ? (hitQuote || (hitItem ? String(hitItem.content || '') : '')) : '',
-            }))
+          // 预览只要拿到 knowledgeId 就一直挂着：pageReady 只决定「传不传页码和引文」。
+          // 之前这里用 !pageReady 换了另一个分支，等于每次换角标都把 DocxView /
+          // SheetView / ReaderFrame 卸载重挂一遍，Word 会重新排版（3~8 秒）并回顶。
+          fileView({
+            chunkId: chunkId || '',
+            id: s.knowledgeId || '',
+            kbId: s.kbId || '',
+            name: fileName || s.doc || s.knowledgeId || '',
+            ext: fileExt,
+            page: pageReady && located ? page : 1,
+            needle: pageReady && located ? (hitQuote || (hitItem ? String(hitItem.content || '') : '')) : '',
+          }))
       : h('div', { className: 'dsh-wk-citetab-b' }, body),
   )
 }

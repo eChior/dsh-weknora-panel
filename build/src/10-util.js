@@ -1,5 +1,11 @@
 // api 调用、时间/复制/发送到对话等工具函数
 // 由 build/src 拼接后注入 factory，和同目录其它片段共享作用域（不要加 import/export）。
+// 把一个异常压成一行可读文字。放在顶层是因为 50-cite.js 的 catch 分支也要用，
+// 而 55-hooks.js 里那个同名变量是 usePanelState 的局部变量，跨组件拿不到。
+function msg(e) {
+  return String((e && e.message) || e)
+}
+
 function api(path, opts) {
   return fetch(API + path, opts).then(function (r) { return r.json() })
 }

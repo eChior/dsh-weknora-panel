@@ -4,6 +4,8 @@
 
 把 [WeKnora](https://weknora.weixin.qq.com) 知识库接进 DeepSeek Harness（DSH）。
 
+> **改代码前先读 [docs/PITFALLS.md](./docs/PITFALLS.md)** —— 33 条真实踩过的坑（CSS 数组插错、profile 下 require 解析、flex 高度塌陷、shadow root 事件 retarget、假 DOM 测试失真等），每条带证据与正确做法。
+
 - **左侧栏「知识库」面板**：库列表 → 文件列表 → 正文预览；原件用 pdfjs 渲染，滚轮翻页。
 - **会话里可点角标**：agent 回答里的出处角标点一下，右侧栏直接打开原文，PDF 自动定位到命中页并标黄。
 - **7 个 agent 工具**：服务端一次问答（快）、逐段读原文、检索、看库里有什么。

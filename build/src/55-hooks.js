@@ -275,26 +275,35 @@ function usePanelState() {
   // 表格类不走 PDF：LibreOffice 转出来的表格 PDF 没有列宽与分页可言，读起来是灾难。
   // DSH 自己就能打开 Excel，这里只负责把文件交出去（下载 / 在 DSH 里打开）。
   var previewIsSheet = /^(xls|xlsx|xlsm|ods|csv)$/.test(previewExt || '')
+  var previewIsWord = /^(doc|docx|docm|odt|rtf)$/.test(previewExt || '')
   var previewBody = null
   if (preview) {
     if (preview.kind === 'text') {
       // Office 文档默认走「原件」：宿主用 DSH 自带的 LibreOffice 套件把它转成 PDF，
       // 和右侧栏用同一个 pdfjs 渲染器：连续滚动翻页，滚轮就是翻页。
       // 换成 iframe 会带上浏览器自带的「上一页/下一页」工具条，样式也不一致。
-      if (previewIsSheet) {
-        previewBody = h('div', { className: 'dsh-wk-note dsh-wk-sheetnote' },
-          h('div', null, '表格文件不在面板里渲染（PDF 化会丢列宽，还不如 DSH 自己的表格预览）。'),
-          h('div', { className: 'dsh-wk-sheetrow' },
-            h('button', { className: 'dsh-wk-btn', onClick: function () { downloadOriginal(preview.file.id, preview.file.file_name || preview.file.title) } }, '下载原件'),
-            h('button', { className: 'dsh-wk-btn', onClick: function () { sendToConversation('请打开这个表格文件：' + (preview.file.title || preview.file.file_name || '')) } }, '交给对话')))
+      if (previewIsSheet || previewIsWord) {
+        // Excel 走 SheetView（xlsx 解析成真表格），Word 走 DocxView（docx-preview 保留排版），
+        // 都不再先转 PDF —— 转出来的表格/Word 丢了列宽和分页，看着像截图。
+        previewBody = fileView({
+          id: preview.file.id || '',
+          kbId: preview.file.knowledge_base_id || (curKb && curKb.id) || '',
+          name: preview.file.title || preview.file.file_name || preview.file.id,
+          ext: previewExt,
+          page: preview.page || 1,
+          needle: preview.focusContent || '',
+        })
       } else if (previewIsOffice && officeOn) {
-        previewBody = h('div', { className: 'dsh-wk-nos' },
-          h('iframe', {
-            className: 'dsh-wk-pdfframe',
-            src: '/api/weknora/pdf?id=' + encodeURIComponent(preview.file.id)
-              + (preview.page > 1 ? '#page=' + preview.page : ''),
-            title: '原件预览',
-          }))
+        // 和右侧栏用同一个阅读器（paper-reader 的 pdf.js 页面）：
+        // 缩放、翻页、搜索、命中跳页都在里面，比浏览器原生 PDF 多出黄块定位。
+        previewBody = fileView({
+          id: preview.file.id || '',
+          kbId: preview.file.knowledge_base_id || (curKb && curKb.id) || '',
+          name: preview.file.title || preview.file.file_name || preview.file.id,
+          ext: previewExt,
+          page: preview.page || 1,
+          needle: preview.focusContent || '',
+        })
       } else {
         previewBody = h('div', { className: 'dsh-wk-pre' },
           (preview.items && preview.items.length)

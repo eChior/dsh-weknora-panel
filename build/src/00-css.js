@@ -184,7 +184,7 @@ var CSS = [
   '.dsh-wk-ovl-h{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid rgba(0,0,0,.08);flex-shrink:0}',
   '.dsh-wk-ovl-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:13px}',
   '.dsh-wk-ovl-b{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}',
-'.dsh-wk-citetab-b.dsh-wk-nos,.dsh-wk-nos{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:0}',
+'.dsh-wk-citetab-b.dsh-wk-nos,.dsh-wk-nos{flex:1;min-height:420px;display:flex;flex-direction:column;overflow:hidden;padding:0}',
   '.dsh-wk-x{width:20px;height:20px;padding:0;border:none;border-radius:4px;background:transparent;color:#888;font-size:12px;line-height:20px;cursor:pointer;flex-shrink:0}',
   '.dsh-wk-x:hover{background:rgba(0,0,0,.08);color:#333}',
   // ── 右侧边栏「知识库原文」tab ──
@@ -266,7 +266,7 @@ var CSS = [
   '.dsh-wk-ans th,.dsh-wk-ans td{border:1px solid var(--dsw-alias-border-secondary,rgba(0,0,0,.12));padding:5px 8px;text-align:left;vertical-align:top}',
   '.dsh-wk-ans th{background:var(--dsw-alias-bg-secondary,#f7f9fc);font-weight:600}',
   '.dsh-wk-ans h1,.dsh-wk-ans h2,.dsh-wk-ans h3,.dsh-wk-ans h4{font-size:1em;margin:14px 0 6px}',
-  '.dsh-wk-reader-frame{width:100%;height:100%;min-height:420px;border:0;background:#fff;border-radius:4px}',
+  '.dsh-wk-reader-frame{display:block;width:100%;height:100%;min-height:420px;border:0;background:#fff;border-radius:4px}',
 ].join('')
 
 var CSS_TAG_ID = 'dsh-weknora/panel.css'
@@ -291,6 +291,20 @@ var CITE_CSS = [
   'a[href^="dsh-weknora:"]{display:inline-block;min-width:15px;height:15px;padding:0 3px;margin:0 2px;border-radius:8px;background:#e7f0fd;color:#2b6cb0!important;font-size:10px;font-weight:700;line-height:15px;text-align:center;text-decoration:none!important;vertical-align:super;position:relative;top:-.15em;cursor:pointer;font-family:inherit;font-style:normal}',
   'a[href^="dsh-weknora:"]:hover{background:#d3e5fb;color:#1e4e8c!important}',
   'a[href^="dsh-weknora:"]:visited{color:#2b6cb0!important}',
+  '.dsh-wk-docx{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;min-width:0}',
+  '.dsh-wk-docxbox{flex:1;min-height:420px;overflow:auto;background:#fff;padding:10px 12px}',
+  '.dsh-wk-docxbox .docx-wrapper{background:#fff;padding:0;display:block}',
+  '.dsh-wk-docxbox .docx{box-shadow:none;margin:0 auto 14px;max-width:100%}',
+  // 只留命中处的黄底：docx 自带的段间/表格底色全部抹掉，否则看起来是一堆杂色块
+  '.dsh-wk-docxbox *:not(mark){background-color:transparent!important;background-image:none!important}',
+  'mark.dsh-wk-hl{background:#ffe58f!important;color:inherit!important;padding:0 1px;border-radius:2px}',
+  '.dsh-wk-sheetwrap{flex:1;min-height:420px;overflow:auto;padding:8px 10px}',
+  '.dsh-wk-sheetone{margin-bottom:16px}',
+  '.dsh-wk-sheetname{font-size:12px;font-weight:600;color:#666;margin-bottom:6px}',
+  '.dsh-wk-sheetbox{overflow:auto;border:1px solid #e3e3e3;border-radius:4px;max-height:none}',
+  '.dsh-wk-sheettable{border-collapse:collapse;font-size:12px;white-space:nowrap}',
+  '.dsh-wk-sheettable td{border:1px solid #ececec;padding:3px 8px;vertical-align:top}',
+  '.dsh-wk-sheethead{background:#f5f7fa!important;font-weight:600}',
 ].join('')
 
 function injectCiteStyles() {

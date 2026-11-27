@@ -103,20 +103,29 @@ function decorateSkip(node) {
 // DSH 的消息区可能挂在 shadow root 里（插件样式都要往每个 shadowRoot 塞一份），
 // 所以装饰器不能只看 document.body，得把所有 shadow root 一起扫。
 function citeRoots() {
+  // 原来用递归收集 shadow root：DSH 的组件树很深，每个组件几乎都有 shadowRoot，
+  // 递归层数直接跟着 DOM 深度走 → 深会话里就抛 Maximum call stack size exceeded。
+  // 改成显式栈迭代，并给收集数量设上限，任何页面结构都不会把这里撑爆。
   var out = []
-  var seen = []
-  var walk = function (root) {
-    if (!root || seen.indexOf(root) >= 0) return
-    seen.push(root)
+  var stack = []
+  var seen = new Set()
+  var budget = 400
+  try { if (document.body) stack.push(document.body) } catch (e) { return out }
+  while (stack.length && out.length < budget) {
+    var root = stack.pop()
+    if (!root || seen.has(root)) continue
+    seen.add(root)
     out.push(root)
     var els
-    try { els = root.querySelectorAll('*') } catch (e) { return }
-    for (var i = 0; i < els.length; i++) {
-      var sr = els[i] && els[i].shadowRoot
-      if (sr) walk(sr)
+    try { els = root.querySelectorAll('*') } catch (e) { continue }
+    var n = els.length
+    if (n > 4000) n = 4000           // 超大 DOM 只扫前 4000 个，避免长时间阻塞
+    for (var i = 0; i < n; i++) {
+      var el = els[i]
+      var sr = el && el.shadowRoot
+      if (sr && !seen.has(sr)) stack.push(sr)
     }
   }
-  try { if (document.body) walk(document.body) } catch (e) { /* 忽略 */ }
   return out
 }
 
@@ -136,17 +145,46 @@ function _doDecorate() {
 // 只认短码 [#ab12cd34]。裸 [1] 一律不装饰：
 // 正文示例、代码里的 m[1]、思考过程里的编号都会被误伤，
 // 之前把推理区里的 m[1] 染成蓝角标就是这么来的。
-var MARK_RE = /[\[【]#([0-9a-z]{6,12})[\]】]/g
+// 只认规范短码 [#8位小写hex]。模型复述时会把 [#cb6ea94c] 抄成 [#C~hn]、[#?R]，
+// 这类脏标记既点不了又不该显示，由 MARK_JUNK 直接隐藏掉。
+var MARK_RE = /[\[【]#([0-9a-z]{4,12})[\]】]/g
+var MARK_JUNK = /[\[【]#[^\[\]【】\n]{1,14}[\]】]/g
 
 function decorateOneRoot(root) {
   var localSeq = { __n: 0 }
+
+  // 先清掉「脏标记」：模型把 [#cb6ea94c] 抄成 [#C~hn]、[#?R] 这种情况，
+  // 既点不了也不该出现在正文里。含合法短码的文本节点跳过，交给下面正常装饰。
+  try {
+    var junkWalker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null)
+    var junkNodes = []
+    var jn
+    while ((jn = junkWalker.nextNode())) {
+      var jt = jn.nodeValue
+      if (!jt || (jt.indexOf('[#') < 0 && jt.indexOf('【#') < 0)) continue
+      if (decorateSkip(jn)) continue
+      MARK_RE.lastIndex = 0
+      if (MARK_RE.test(jt)) continue
+      MARK_JUNK.lastIndex = 0
+      if (MARK_JUNK.test(jt)) junkNodes.push(jn)
+    }
+    for (var ji = 0; ji < junkNodes.length; ji++) {
+      var nn = junkNodes[ji]
+      MARK_JUNK.lastIndex = 0
+      nn.nodeValue = String(nn.nodeValue).replace(MARK_JUNK, '')
+    }
+  } catch (e) { /* 清不掉就保持原样，不影响下面的装饰 */ }
+
   var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null)
   var nodes = []
   var node
+  var guard = 0
   while ((node = walker.nextNode())) {
+    if (++guard > 20000) break   // 单个 root 最多扫 2 万个文本节点
     var txt = node.nodeValue
     if (!txt || (txt.indexOf('[') < 0 && txt.indexOf('【') < 0)) continue
     // 新格式 [#ab12cd34]（短码，全局唯一）；旧格式 [1] / 【1】（历史消息）
+    MARK_RE.lastIndex = 0
     if (!MARK_RE.test(txt)) continue
     if (decorateSkip(node)) continue
     nodes.push(node)
@@ -192,11 +230,41 @@ function decorateOneRoot(root) {
 }
 
 function logDiag(evt, data) {
+  if (!window.__DSH_WK_DIAG__) return        // 诊断默认关：控制台设 __DSH_WK_DIAG__ = true 才上报
+  if (window.__WK_DIAG_BUSY__) return   // 防止「记录日志本身出错 → 又触发错误上报」的递归
   try {
-    var s = evt + ' ' + JSON.stringify(data || {})
+    window.__WK_DIAG_BUSY__ = true
+    var s = evt + ' ' + safeJson(data || {})
     var p = fetch(API + '/diag', { method: 'POST', body: s })
     if (p && typeof p.catch === 'function') p.catch(function () { /* 诊断端点不可用时静默 */ })
   } catch (e) { /* 忽略 */ }
+  finally { try { window.__WK_DIAG_BUSY__ = false } catch (e2) {} }
+}
+
+// 只序列化「能安全展开的纯数据」：DOM 节点、window 这类带循环引用的对象一律换成短标签，
+// 否则 JSON.stringify 会抛 circular，错误上报再触发上报，最终就是 Maximum call stack size exceeded。
+function safeJson(v, depth) {
+  var d = depth || 0
+  try {
+    if (v === null || v === undefined) return 'null'
+    var t = typeof v
+    if (t === 'string') return JSON.stringify(v.length > 400 ? v.slice(0, 400) + '…' : v)
+    if (t === 'number' || t === 'boolean') return String(v)
+    if (t === 'function') return '"[function]"'
+    if (d >= 3) return '"[deep]"'
+    if (v.nodeType || v === window || v === document) return '"[dom]"'
+    if (Array.isArray(v)) {
+      var arr = []
+      for (var i = 0; i < v.length && i < 40; i++) arr.push(safeJson(v[i], d + 1))
+      return '[' + arr.join(',') + ']'
+    }
+    var parts = []
+    var keys = Object.keys(v).slice(0, 30)
+    for (var k = 0; k < keys.length; k++) parts.push(JSON.stringify(keys[k]) + ':' + safeJson(v[keys[k]], d + 1))
+    return '{' + parts.join(',') + '}'
+  } catch (e) {
+    return '"[unserializable]"'
+  }
 }
 
 // 启动后自动采样一轮（每 5 秒一次，共 12 次），不需要用户刻意操作，
@@ -457,7 +525,7 @@ function ensureCiteTabType(ctx) {
 }
 
 function openCiteInSidebar(ctx, detail) {
-  try { probeLayout('before-open') } catch (eB) {}
+  if (window.__DSH_WK_DIAG__) { try { probeLayout('before-open') } catch (eB) {} }
   try { ensureCiteTabType(ctx) } catch (e0) {}
   try {
     if (!ctx || !ctx.sidebarRight || typeof ctx.sidebarRight.openTab !== 'function') return false
@@ -473,7 +541,7 @@ function openCiteInSidebar(ctx, detail) {
     // params 用「恒定值」：contentId = pageAddress(kind, params)，恒定的 params 让同一个
     // kind 永远复用同一个 tab（不会每点一次多开一个），内容仍由 PENDING_CITE 推给 tab 自己更新。
     ctx.sidebarRight.openTab(CITE_TAB_KIND, { params: { mode: 'cite' }, revealIfOpened: true })
-    try { setTimeout(function () { probeLayout('after-open') }, 700) } catch (e) { /* 忽略 */ }
+    if (window.__DSH_WK_DIAG__) { try { setTimeout(function () { probeLayout('after-open') }, 700) } catch (e) { /* 忽略 */ } }
     return true
   } catch (e) {
     console.warn('[dsh-weknora] 右侧栏打开失败，退回面板:', e && e.message)
@@ -515,7 +583,13 @@ function CiteTabTitle(props) {
 // ── 客户端 PDF 渲染（pdfjs 画 canvas，命中段叠黄框）──
 var __pdfjs = null
 
+var __wkChainAt = 0
 function fixHeightChain() {
+  // 会被 120/700/1600ms 三次定时器 + open-cite 调用；短时间重复跑会和 DSH 的
+  // ResizeObserver 互相触发（日志里成片的 "loop completed with undelivered notifications"）。
+  var now = Date.now()
+  if (now - __wkChainAt < 400) return
+  __wkChainAt = now
   // 数据（parent-chain 探针）：我们的容器 h=834、tabBody h=834，但**中间那层 DIV h=0**。
   // 也就是说 DSH 的 wrapper 把高度链断掉了 —— 我们的 height:100% 解析成 0（白屏），
   // 之前一直靠 min-height 硬造高度，造过头就把整页顶高。
@@ -601,11 +675,18 @@ function citeChainDump() {
 function CiteTabBody(props) {
   // 挂载后量两次父链高度（700ms / 2500ms），看哪一层是 auto 高度、PDF 画完后溢出多少
   React.useEffect(function () {
+    // 注意：t0/t3/t4 必须接住 —— 之前写成了裸 setTimeout，
+    // cleanup 里 clearTimeout(t0) 抛 ReferenceError，后面的「还原 overflow」再也执行不到，
+    // 于是页面被永久锁成 clip（用户看到的就是「上移之后回不来」）。
     var t0 = setTimeout(fixHeightChain, 120)
+    // iframe 里是整套 pdf.js，加载完成后才把容器撑到真实高度；
+    // 只在 120ms 时夹一次会被它顶开，所以几个时间点都重新夹一遍。
+    var t3 = setTimeout(fixHeightChain, 700)
+    var t4 = setTimeout(fixHeightChain, 1600)
     var t1 = setTimeout(citeChainDump, 700)
     var t2 = setTimeout(citeChainDump, 2500)
     return function () {
-      clearTimeout(t0); clearTimeout(t1); clearTimeout(t2)
+      clearTimeout(t0); clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4)
       try {
         var de = document.documentElement
         var bd = document.body
@@ -748,10 +829,13 @@ function CiteTabBodyInner(props) {
       ? h('div', { className: 'dsh-wk-citetab-b dsh-wk-nos' },
           !pageReady
             ? h('div', { className: 'dsh-wk-note' }, '正在定位原文所在页…')
-            : h(PdfView, {
-              id: s.knowledgeId,
-              page: located ? page : 0,
-              needle: located && hitItem ? String(hitItem.content || '') : '',
+            : fileView({
+              id: s.knowledgeId || '',
+              kbId: s.kbId || '',
+              name: s.doc || s.knowledgeId || '',
+              ext: extOf({ file_name: s.doc, title: s.doc }),
+              page: located ? page : 1,
+              needle: located ? (hitQuote || (hitItem ? String(hitItem.content || '') : '')) : '',
             }))
       : h('div', { className: 'dsh-wk-citetab-b' }, body),
   )
@@ -766,6 +850,7 @@ function CiteTabBodyInner(props) {
 // 前端异常上报：右侧栏白屏时，宿主侧的 ~/.dsh/dsh-weknora-diag.log 会留下堆栈，
 // 不用让用户开开发者工具。
 function installErrorReporter() {
+  if (!window.__DSH_WK_DIAG__) return        // 诊断默认关
   if (typeof window === 'undefined' || window.__WK_ERR_BOUND__) return
   window.__WK_ERR_BOUND__ = true
   window.addEventListener('error', function (ev) {

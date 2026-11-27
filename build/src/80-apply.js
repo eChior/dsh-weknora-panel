@@ -10,7 +10,9 @@ var applied = false
 /** 打开一条出处的原文（会写 sessionStorage，供面板回退路径补跳） */
 
 function apply(ctx) {
-  try { startLayoutWatch() } catch (e) { /* 忽略 */ }
+  // 布局采样默认不跑：原来每 5 秒一次共 12 次，日志里刷屏。
+  // 需要定位高度问题时，把下面这行取消注释，或在控制台执行 __DSH_WK_LAYOUT_WATCH__=false 后手动调用。
+  // try { startLayoutWatch() } catch (e) { /* 忽略 */ }
   if (applied) {
     console.log('[dsh-weknora] apply 已执行过，跳过重复注册')
     return
@@ -60,7 +62,12 @@ exports.inject = inject
 // 本地渲染自测用的钩子（DSH 加载时不会碰它）
 exports.__dev = {
   renderMarkdown: renderMarkdown,
+  fileView: fileView,
+  DocxView: DocxView,
+  SheetView: SheetView,
+  highlightQuote: highlightQuote,
   PdfView: PdfView,
+  ReaderFrame: ReaderFrame,
   WeKnoraPage: WeKnoraPage,
   SetupDialog: SetupDialog,
   bindCiteLinks: bindCiteLinks,

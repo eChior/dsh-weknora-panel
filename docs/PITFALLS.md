@@ -454,3 +454,34 @@ iframe 内：pages=12 canvas=4 layers=3 ranges=1 marks=0 locateLoaded=function
 **正确做法**：标志位置位时同时 `clearInterval`；「事情做完了」这种条件（比如标记数连续 5 轮不变）也要能触发清理。写定时器时先想清楚它的退出条件是什么、谁来清。
 
 **证据**：修后 `tickTimer` / `markTimer` 都在 `stopTick()` / `watchMarkIdle()` 里清；`viewer.html` 里 `tickTimer = setInterval(kick, 300)`。
+
+
+## 十二、iOS 之后最坑的一类：flex 高度链
+
+### 12.1 `flex:1 1 auto` + `min-height:0` 在 auto 高度父级里会塌成 0
+
+- **症状**：Excel 表格整块看不见，`scrollWidth` 明明 > `clientWidth` 却没有横向滚动条。
+- **根因**：DSH 右侧栏那层的 `tabBody` 是 `height:100%`，但它的父级高度可能是 `auto`。
+  整条链上每一层 `flex:1 1 auto + min-height:0` 都在等父级给高度，父级不给就一路塌到 0。
+  实测同一份代码量到过三种结果：`SB=398x0` / `SB=398x120` / `SB=398x192`。
+- **更阴的一点**：`.dsh-wk-sheetbox` 高度=0 时，横向滚动条画在这个 0 高盒子的底部，
+  用户永远看不到 —— 表现为「不能左右滚」，而不是「表格没了」。
+- **正确做法**：不要指望祖先链。用视口给它一个确定的盒子：
+  `height:calc(100vh - 260px); min-height:240px; max-height:calc(100vh - 220px)`。
+  这样父级是 auto 还是固定高度都能用。
+- **证据**：`tmp\shadow-harness.cjs` 的 `SHEET … SB=398x192 scrollW=2427 ox=scroll`。
+
+### 12.2 测 shadow DOM 里的样式，必须把 CSS 注进 shadow root
+
+- harness 之前只 `document.head.appendChild(<style>)`，组件却在 `attachShadow` 里。
+  head 的样式不穿透 shadow → 量到的全是浏览器默认值：`overflow:visible`、
+  `max-width` 不生效（`widestTd=142` 而不是 300）、`table` 高度 24 万。
+  据此得出的判断全部无效。
+- 产品里是 `ensureStylesHere(el)` 往当前 root 补一份，harness 必须照做。
+
+### 12.3 全屏浮层不要「再渲染一遍同样的组件」
+
+- 「放大」用 `position:fixed;inset:0` 盖住整个 DSH，用户不知道自己站在哪；
+  里面又调一次 `fileView()`，PDF 重新加载、Word 重新 `renderAsync`，
+  与侧栏那份状态不同步 —— 用户的原话是「有误导的情况」。
+- 右栏本身能拖宽、能全屏，插件不该再造全屏。缩放按钮就够。

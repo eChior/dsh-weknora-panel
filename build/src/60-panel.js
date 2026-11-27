@@ -4,7 +4,7 @@ function WeKnoraPage(props) {
 
   var status = s.status, kbs = s.kbs, curKb = s.curKb, items = s.items
   var loading = s.loading, error = s.error, folders = s.folders, curFolder = s.curFolder
-  var uploads = s.uploads, agents = s.agents, agentId = s.agentId, fileRef = s.fileRef
+  var uploads = s.uploads, fileRef = s.fileRef
   var updatedAt = s.updatedAt, refreshStatus = s.refreshStatus, loadKbs = s.loadKbs
   var loadFolders = s.loadFolders, loadFiles = s.loadFiles, doUpload = s.doUpload
   var PARSE_TEXT = s.PARSE_TEXT, trackParse = s.trackParse

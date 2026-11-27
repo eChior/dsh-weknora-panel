@@ -16,8 +16,6 @@ function usePanelState() {
   var cfd = React.useState('__all__'); var curFolder = cfd[0], setCurFolder = cfd[1]
   var ups = React.useState([]); var uploads = ups[0], setUploads = ups[1]
   var us = React.useState(null); var updatedAt = us[0], setUpdatedAt = us[1]
-  var ags = React.useState([]); var agents = ags[0], setAgents = ags[1]
-  var aid = React.useState('builtin-quick-answer'); var agentId = aid[0], setAgentId = aid[1]
   var fileRef = React.useRef(null)
   var msg = function (e) { return String((e && e.message) || e) }
 
@@ -42,15 +40,6 @@ function usePanelState() {
       }
     }).catch(function (e) { setError(msg(e)) })
       .then(function () { setLoading(false) })
-  }
-  var loadAgents = function () {
-    return api('/agents').then(function (r) {
-      if (r && r.ok && r.agents && r.agents.length) {
-        setAgents(r.agents)
-        var has = r.agents.some(function (a) { return a.id === agentId })
-        if (!has) setAgentId(r.defaultAgentId || r.agents[0].id)
-      }
-    }).catch(function () { /* 拿不到就用内置快速问答 */ })
   }
   var loadFolders = function (kb) {
     if (!kb) { setFolders([]); return Promise.resolve() }
@@ -146,7 +135,7 @@ function usePanelState() {
       if (curKb) { loadFiles(curKb, keyword, curFolder); loadFolders(curKb) }
     }, 1500)
   }
-  React.useEffect(function () { refreshStatus(); loadAgents() }, [])
+  React.useEffect(function () { refreshStatus() }, [])
   React.useEffect(function () {
     if (status && status.configured) loadKbs()
   }, [status && status.configured])
@@ -332,11 +321,11 @@ function usePanelState() {
   return {
     // 数据
     status: status, kbs: kbs, curKb: curKb, items: items, loading: loading, error: error,
-    folders: folders, curFolder: curFolder, uploads: uploads, agents: agents, agentId: agentId, fileRef: fileRef,
+    folders: folders, curFolder: curFolder, uploads: uploads, fileRef: fileRef,
     updatedAt: updatedAt, setUpdatedAt: setUpdatedAt, msg: msg, PARSE_TEXT: PARSE_TEXT,
     setCurKb: setCurKb, setItems: setItems, setCurFolder: setCurFolder, setUploads: setUploads,
     setLoading: setLoading, setError: setError, setKbs: setKbs, setFolders: setFolders,
-    refreshStatus: refreshStatus, loadKbs: loadKbs, loadAgents: loadAgents,
+    refreshStatus: refreshStatus, loadKbs: loadKbs,
     loadFolders: loadFolders, loadFiles: loadFiles, patchUpload: patchUpload,
     trackParse: trackParse, doUpload: doUpload,
     // 预览与检索

@@ -48,13 +48,17 @@ function DocxView(props) {
   var natS = React.useState(0)
   var natW = natS[0], setNatW = natS[1]
   var undoRef = React.useRef(null)
+  // 渲染完成计数：定位 effect 依赖它，渲染一完成就立刻定位一次。
+  var readyS = React.useState(0)
+  var ready = readyS[0], setReady = readyS[1]
 
+  // 渲染只看文件 id：同一篇文档换角标位置时绝不能重新下载、重新排版，
+  // 否则每次点角标都像重新打开文件（用户的原话）。
   React.useEffect(function () {
     var alive = true
     setS({ loading: true, err: '', marks: 0 })
     ;(async function () {
       var lib = await loadDocxRuntime()
-      var loc = await loadLocators(props.chunkId)
       var resp = await fetch(API + '/content?id=' + encodeURIComponent(props.id || ''))
       if (!resp.ok) throw new Error('取原件失败 HTTP ' + resp.status)
       var buf = await resp.arrayBuffer()
@@ -77,8 +81,8 @@ function DocxView(props) {
       if (!alive) return
       var sec = el.querySelector('section.docx, .docx')
       if (sec && sec.offsetWidth) setNatW(sec.offsetWidth)
-      var n = locateDocx(el, loc, props.needle, undoRef)
-      setS({ loading: false, err: '', marks: n })
+      setS({ loading: false, err: '', marks: 0 })
+      setReady(function (v) { return v + 1 })
     })().catch(function (e) {
       if (alive) setS({ loading: false, err: String((e && e.message) || e), marks: 0 })
     })
@@ -86,7 +90,33 @@ function DocxView(props) {
       alive = false
       if (undoRef.current) { try { undoRef.current() } catch (e) {} undoRef.current = null }
     }
-  }, [props.id, props.chunkId, props.needle])
+  }, [props.id])
+
+  // 定位只看 chunkId / needle，复用已经排版好的 DOM。
+  React.useEffect(function () {
+    if (!ready) return undefined
+    var alive = true
+    var el = scaleRef.current
+    if (!el) return undefined
+    ;(async function () {
+      var loc = await loadLocators(props.chunkId)
+      if (!alive) return
+      var n = locateDocx(el, loc, props.needle, undoRef)
+      setS(function (prev) { return Object.assign({}, prev, { marks: n }) })
+      // renderAsync 刚结束时字体、缩放还没落定，rect 可能为 0，
+      // 这时滚过去等于没滚。稍后再滚一次。
+      if (n) {
+        setTimeout(function () {
+          if (!alive) return
+          try {
+            var first = (undoRef.lastRange) || null
+            if (first) srcReveal(el, first)
+          } catch (e) { /* 忽略 */ }
+        }, 450)
+      }
+    })().catch(function () { /* 定位失败不影响查看 */ })
+    return function () { alive = false }
+  }, [props.chunkId, props.needle, ready])
 
   function effectiveZoom() {
     if (zoom > 0) return zoom
@@ -151,7 +181,21 @@ function locateDocx(root, loc, needle, undoRef) {
     var one = text ? srcFindTextRange(root, text) : null
     if (one) ranges.push(one)
   }
+  try {
+    logDiag('locate-docx', {
+      locs: list.length,
+      docxLocs: list.filter(function (x) { return x && x.type === 'docx' }).length,
+      blocks: blocks.length,
+      ranges: ranges.length,
+      hlApi: !!srcHighlightRegistry(),
+      samples: list.slice(0, 3).map(function (x) {
+        return { t: x && x.type, m: x && x.mapping, b: x && x.block, q: String((x && x.quote) || '').slice(0, 24) }
+      }),
+      firstText: ranges.length ? String(ranges[0].toString()).slice(0, 40) : '',
+    }, true)
+  } catch (e) { /* 忽略 */ }
   if (!ranges.length) return 0
+  if (undoRef) undoRef.lastRange = ranges[0]   // 供定位 effect 延迟再滚一次
   if (undoRef.current) { try { undoRef.current() } catch (e) {} }
   undoRef.current = srcHighlightRanges(ranges)
   srcReveal(root, ranges[0])
@@ -166,17 +210,14 @@ function SheetView(props) {
   var s = st[0], setS = st[1]
   var undoRef = React.useRef(null)
 
+  // 表格数据只看文件 id：同一张表换角标位置不重新取、不重建表格。
   React.useEffect(function () {
     var alive = true
     setS({ loading: true })
-    Promise.all([
-      api('/sheet?id=' + encodeURIComponent(props.id || '')),
-      loadLocators(props.chunkId),
-    ]).then(function (rs) {
+    api('/sheet?id=' + encodeURIComponent(props.id || '')).then(function (r) {
       if (!alive) return
-      var r = rs[0], loc = rs[1]
       if (!r || !r.ok) { setS({ loading: false, error: (r && r.message) || '读不到表格' }); return }
-      setS({ loading: false, sheets: r.sheets || [], sheetNames: r.sheetNames || [], loc: loc })
+      setS({ loading: false, sheets: r.sheets || [], sheetNames: r.sheetNames || [] })
     }).catch(function (e) {
       if (alive) setS({ loading: false, error: String((e && e.message) || e) })
     })
@@ -184,17 +225,23 @@ function SheetView(props) {
       alive = false
       if (undoRef.current) { try { undoRef.current() } catch (e) {} undoRef.current = null }
     }
-  }, [props.id, props.chunkId])
+  }, [props.id])
 
-  // 表格 HTML 由 SheetJS 生成（单元格文本已转义）。这里再过一遍：
-  // 只留表格结构，去掉脚本/样式/事件属性，等价 WeKnora 的 sanitizeHTML。
+  // 定位只看 chunkId：表格已经在 DOM 里就只换高亮。
   React.useEffect(function () {
     var box = boxRef.current
-    if (!box || !s.sheets) return
-    var loc = s.loc || { locators: [] }
-    var n = locateExcel(box, loc, s.sheetNames || [], undoRef)
-    setS(function (prev) { return Object.assign({}, prev, { marks: n }) })
-  }, [s.sheets])
+    if (!box || !s.sheets) return undefined
+    var alive = true
+    ;(async function () {
+      var loc = await loadLocators(props.chunkId)
+      if (!alive) return
+      var b = boxRef.current
+      if (!b) return
+      var n = locateExcel(b, loc, s.sheetNames || [], undoRef)
+      setS(function (prev) { return Object.assign({}, prev, { marks: n }) })
+    })().catch(function () { /* 忽略 */ })
+    return function () { alive = false }
+  }, [s.sheets, props.chunkId])
 
   if (s.loading) return h('div', { className: 'dsh-wk-note' }, '正在读表格…')
   if (s.error) return h('div', { className: 'dsh-wk-err' }, s.error)
@@ -265,6 +312,22 @@ function locateExcel(box, loc, sheetNames, undoRef) {
       if (tr) targets.push(tr)
     }
   }
+  try {
+    var probeRows = []
+    for (var pi = 0; pi < list.length && probeRows.length < 4; pi++) {
+      var pl = list[pi]
+      if (!pl || pl.type !== 'sheet') continue
+      probeRows.push({ sheet: pl.sheet, rs: pl.row_start, re: pl.row_end, m: pl.mapping, partial: !!pl.partial })
+    }
+    logDiag('locate-excel', {
+      locs: list.length,
+      sheetNames: (sheetNames || []).slice(0, 4),
+      targets: targets.length,
+      rows: sheetRows(box.querySelector('#sheet-0') || box).size,
+      probe: probeRows,
+      firstRowText: targets.length ? String(targets[0].textContent || '').replace(/\s+/g, ' ').slice(0, 60) : '',
+    }, true)
+  } catch (e) { /* 忽略 */ }
   if (!targets.length) return 0
   if (undoRef.current) { try { undoRef.current() } catch (e) {} }
   undoRef.current = srcHighlightElements(targets)

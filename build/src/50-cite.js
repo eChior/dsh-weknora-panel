@@ -156,8 +156,24 @@ function _doDecorate() {
 var MARK_RE = /[\[【]#([0-9a-z]{4,12})[\]】]/g
 var MARK_JUNK = /[\[【]#[^\[\]【】\n]{1,14}[\]】]/g
 
+// 编号状态按 root 持久：流式输出会让 decorateOneRoot 被反复调用，
+// 每次新建计数器的话，后来出现的短码会从 1 重新数（同一条回答里出现好几个 ①）。
+var ROOT_SEQ = new WeakMap()
+function seqStateFor(root) {
+  var st = ROOT_SEQ.get(root)
+  if (!st) { st = { byShort: {}, n: 0 }; ROOT_SEQ.set(root, st) }
+  return st
+}
+
 function decorateOneRoot(root) {
-  var localSeq = { __n: 0 }
+  var localSeq = seqStateFor(root)
+  // root 里一个已装饰的角标都没有 → 这块被整体重渲染过，编号从头来。
+  try {
+    if (root.querySelector && !root.querySelector('a[data-wk-cite]')) {
+      localSeq.byShort = {}
+      localSeq.n = 0
+    }
+  } catch (e) { /* 忽略 */ }
 
   // 先清掉「脏标记」：模型把 [#cb6ea94c] 抄成 [#C~hn]、[#?R] 这种情况，
   // 既点不了也不该出现在正文里。含合法短码的文本节点跳过，交给下面正常装饰。
@@ -211,8 +227,8 @@ function decorateOneRoot(root) {
       if (short) {
         // 短码：不需要编号表，短码本身就指向唯一 chunk。
         // 显示编号按「本条消息内第几次出现」算，所以每条回答都从 1 开始。
-        var seq = localSeq[short]
-        if (!seq) { seq = (++localSeq.__n); localSeq[short] = seq }
+        var seq = localSeq.byShort[short]
+        if (!seq) { seq = (++localSeq.n); localSeq.byShort[short] = seq }
         var doc = ''
         if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)))
         a = document.createElement('a')

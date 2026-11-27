@@ -634,65 +634,67 @@ See https://github.com/adobe-type-tools/cmap-resources
     </div> <!-- outerContainer -->
     <div id="printContainer"></div>
   
+<style>
+/* 命中高亮：与 Word/Excel 同一套（WeKnora document-preview.vue 的色值）。 */
+::highlight(source-locate) { background-color: rgba(250, 204, 75, .34); }
+mark.source-locate-mark {
+  background-color: rgba(250, 204, 75, .34);
+  color: inherit;
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+</style>
+<script src="../../locatejs"></script>
 <script>
 /* 插件注入：把 ?q= 引文在官方文本层里标黄。
-   官方 viewer 的 .textLayer span 是绝对定位的透明文字，给它加背景色就是黄块，
-   不用改 viewer.mjs，也不需要额外 overlay。 */
+   逻辑与 Word/Excel 完全一致，都来自 WeKnora：
+     srcFindTextRange  —— 归一化后唯一命中才算找到（宁可不标也不瞎猜）
+     srcHighlightRanges —— 走 CSS Custom Highlight API，完全不改 DOM
+     srcScrollRectIntoContainer —— 只滚 viewer 自己的容器，绝不动外层页面
+   以前给 span 设 backgroundColor + scrollIntoView，既会留下多余色块，
+   又会把整个 DSH 页面一起滚上去。 */
 (function () {
   function wkNeedle() {
-    try { return (new URLSearchParams(location.search).get('q') || '').replace(/\s+/g, ''); } catch (e) { return '' }
+    try { return new URLSearchParams(location.search).get('q') || '' } catch (e) { return '' }
   }
+  var undo = null
+  var jumped = false
+
   function markOnce(layer, needle) {
-    if (!layer || layer.getAttribute('data-wk-marked') === '1') return false
-    var spans = layer.querySelectorAll('span')
-    if (!spans.length) return false
-    var full = '', map = []
-    for (var i = 0; i < spans.length; i++) {
-      var t = (spans[i].textContent || '').replace(/\s+/g, '')
-      if (!t) continue
-      map.push([full.length, full.length + t.length, spans[i]])
-      full += t
-    }
-    var at = full.indexOf(needle)
-    if (at < 0 && needle.length > 12) at = full.indexOf(needle.slice(0, 12))
-    if (at < 0) return false
-    var end = at + Math.max(4, needle.length)
-    for (var j = 0; j < map.length; j++) {
-      if (map[j][1] > at && map[j][0] < end) {
-        map[j][2].style.backgroundColor = 'rgba(255,214,10,.48)'
-        map[j][2].style.borderRadius = '2px'
-        map[j][2].setAttribute('data-wk-hl', '1')
-      }
-    }
+    if (!layer || layer.getAttribute('data-wk-marked') === '1') return null
+    if (typeof srcFindTextRange !== 'function') return null
+    var r = srcFindTextRange(layer, needle)
+    if (!r) return null
     layer.setAttribute('data-wk-marked', '1')
-    return true
+    return r
   }
-  // 命中后：滚到命中段（官方 viewer 的滚动容器是 #viewerContainer），并放大一档，
-  // 否则窄侧栏里一页缩得只剩轮廓，用户得手动放大才能看清。
-  function wkJump() {
-    if (window.__wkJumped) return
-    var hit = document.querySelector('[data-wk-hl]')
-    if (!hit) return
-    window.__wkJumped = true
-    // 不动缩放：页面用 #zoom=page-width 打开，页宽正好等于侧栏宽，能看全整页。
-    // 这里只把命中段滚到视口中间，用户一打开就看到"对应的那段文字"。
-    setTimeout(function () {
-      try { hit.scrollIntoView({ block: 'center', inline: 'nearest' }) } catch (e3) {}
-      setTimeout(function () {
-        try { hit.scrollIntoView({ block: 'center', inline: 'nearest' }) } catch (e4) {}
-      }, 260)
-    }, 160)
-  }
+
   function markAll() {
     var needle = wkNeedle()
     if (!needle) return
     var layers = document.querySelectorAll('.textLayer')
-    for (var i = 0; i < layers.length; i++) markOnce(layers[i], needle)
-    wkJump()
+    var found = null
+    for (var i = 0; i < layers.length; i++) {
+      var r = markOnce(layers[i], needle)
+      if (r) { found = r; break }
+    }
+    if (!found) return
+    if (undo) { try { undo() } catch (e) {} }
+    undo = srcHighlightRanges([found])
+    if (jumped) return
+    jumped = true
+    // 官方 viewer 的滚动容器；只动它，不用 scrollIntoView。
+    var box = document.getElementById('viewerContainer')
+    setTimeout(function () {
+      try {
+        var rect = found.getBoundingClientRect()
+        if (box && rect && (rect.width || rect.height)) srcScrollRectIntoContainer(box, rect)
+      } catch (e2) {}
+    }, 160)
   }
+
   function start() {
-    try { fetch('/api/weknora/diag', { method: 'POST', headers: { 'content-type': 'text/plain' },
-      body: 'viewer loaded ' + JSON.stringify({ href: location.href.slice(0, 260), dps: document.readyState }) }).catch(function () {}) } catch (e0) {}
     var app = window.PDFViewerApplication
     if (app && app.eventBus) {
       app.eventBus.on('textlayerrendered', function () { setTimeout(markAll, 60) })

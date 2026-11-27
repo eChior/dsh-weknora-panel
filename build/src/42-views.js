@@ -46,33 +46,45 @@ function clearQuoteMarks(root) {
 function highlightQuote(root, quote) {
   if (!root) return 0
   clearQuoteMarks(root)
-  var needle = String(quote || '').replace(/\s+/g, ' ').trim()
+  var needle = normForMatch(String(quote || ''))
   if (needle.length < 4) return 0
-  var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null)
-  var node
-  while ((node = walker.nextNode())) {
-    var t = node.nodeValue || ''
-    if (t.length < 4 || !t.trim()) continue
-    var at = t.indexOf(needle)
-    var len = needle.length
-    if (at < 0) {
-      // 引文常被段落/换行切开，退一步用前 16 字找同一处
-      var short = needle.slice(0, 16)
-      if (short.length < 4) continue
-      at = t.indexOf(short)
-      len = short.length
-    }
-    if (at < 0) continue
-    var mid = node.splitText(at)
-    mid.splitText(len)
+  // docx 把一句话拆成多个 run（<span>），单个文本节点里找不全，
+  // 所以和 PDF 共用一套索引：整棵树的文本拼成去空白串，再按字符区间定位。
+  var idx = buildTextIndex(root)
+  var at = idx.flat.indexOf(needle)
+  var len = needle.length
+  if (at < 0) {
+    var short = needle.slice(0, 16)
+    if (short.length < 4) return 0
+    at = idx.flat.indexOf(short)
+    len = short.length
+  }
+  if (at < 0) return 0
+  var from = idx.fmap[at]
+  var to = idx.fmap[at + len - 1] + 1
+  var jobs = []
+  for (var k = 0; k < idx.nodes.length; k++) {
+    var rec = idx.nodes[k]
+    var v = rec.node.nodeValue || ''
+    var s = rec.start
+    var e = s + v.length
+    if (e <= from || s >= to) continue
+    var a = Math.max(0, from - s)
+    var b = Math.min(v.length, to - s)
+    if (b > a) jobs.push({ node: rec.node, a: a, b: b })
+  }
+  // 倒序：splitText 只影响当前节点及其后兄弟，先处理后面的就不会动到前面的引用
+  for (var t = jobs.length - 1; t >= 0; t--) {
+    var job = jobs[t]
+    var mid = job.a > 0 ? job.node.splitText(job.a) : job.node
+    if (job.b - job.a < (mid.nodeValue || '').length) mid.splitText(job.b - job.a)
     var mk = document.createElement('mark')
     mk.className = 'dsh-wk-hl'
     mk.setAttribute('data-wk-hl', '1')
     mid.parentNode.replaceChild(mk, mid)
     mk.appendChild(mid)
-    return 1
   }
-  return 0
+  return jobs.length ? 1 : 0
 }
 
 // Word：docx-preview 直接渲染成保留排版的 HTML。

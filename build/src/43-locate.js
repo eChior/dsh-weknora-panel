@@ -260,10 +260,13 @@ function srcScrollRectIntoContainer(container, rect) {
 }
 
 function srcScrollParent(el, fallback) {
-  for (var node = el && el.parentElement; node; node = node.parentElement) {
+  // 从 el 自身往上找：调用方传进来的 el 常常是「内容容器」，
+  // 真正能滚的是它的父级，从 parentElement 起找会当场撞上 fallback 就 break。
+  // 到 document.body 之前停，保证永远不会去滚整页。
+  var stop = document.body || null
+  for (var node = el; node && node !== stop; node = node.parentElement) {
     var style = getComputedStyle(node)
     if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight) return node
-    if (node === fallback) break
   }
   return fallback
 }

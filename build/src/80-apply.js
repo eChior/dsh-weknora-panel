@@ -67,6 +67,8 @@ exports.__dev = {
   SheetView: SheetView,
   srcFindInText: srcFindInText,
   srcHighlightRanges: srcHighlightRanges,
+  srcScrollParent: srcScrollParent,
+  srcReveal: srcReveal,
   ReaderFrame: ReaderFrame,
   WeKnoraPage: WeKnoraPage,
   SetupDialog: SetupDialog,

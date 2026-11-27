@@ -130,9 +130,13 @@ function DocxView(props) {
 
   function effectiveZoom() {
     if (zoom > 0) return zoom
+    // 默认按原尺寸显示（以前就是这样），窄侧栏要整页看全时点「适合宽度」。
+    return 1
+  }
+  function fitWidthZoom() {
     var box = boxRef.current
     if (!box || !natW) return 1
-    return Math.max(0.2, Math.min(3, (box.clientWidth - 8) / natW))
+    return Math.max(0.2, Math.min(1, (box.clientWidth - 8) / natW))
   }
   var z = effectiveZoom()
   React.useEffect(function () {
@@ -148,7 +152,7 @@ function DocxView(props) {
   return h('div', { className: 'dsh-wk-docx' },
     h('div', { className: 'dsh-wk-pdfbar' },
       h('button', { className: 'dsh-wk-zbtn', onClick: function () { step(-0.1) }, title: '缩小' }, '−'),
-      h('button', { className: 'dsh-wk-zbtn dsh-wk-zbtn-w', onClick: function () { setZoom(0) }, title: '适合宽度' },
+      h('button', { className: 'dsh-wk-zbtn dsh-wk-zbtn-w', onClick: function () { setZoom(fitWidthZoom()) }, title: '适合宽度' },
         Math.round(z * 100) + '%'),
       h('button', { className: 'dsh-wk-zbtn', onClick: function () { step(0.1) }, title: '放大' }, '＋')),
     s.loading ? h('div', { className: 'dsh-wk-note' }, '正在渲染 Word 原件…') : null,

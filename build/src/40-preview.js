@@ -117,10 +117,6 @@ function StatusTag(props) {
 
 // ── 类型判定 ─────────────────────────────────────────────
 /** 走「分块拼全文 + Markdown 渲染」的文本类 */
-var TEXT_TYPES = {
-  md: 1, markdown: 1, txt: 1, csv: 1, json: 1, html: 1, htm: 1,
-  xml: 1, yaml: 1, yml: 1, log: 1, tsv: 1, ini: 1, conf: 1,
-}
 /** 走预览引擎（office / pdf / 图片 / 音视频）的类型 */
 var OFFICE_TYPES = {
   doc: 1, docx: 1, docm: 1, odt: 1, rtf: 1,
@@ -148,20 +144,13 @@ function previewKindOf(f) {
 /** 给预览引擎一个带扩展名的文件名（WeKnora 的 file_name 本来就有，兜底时才补） */
 function fileNameForFile(f) {
   var n = String((f && (f.file_name || f.title)) || '')
-  if (/\\.([A-Za-z0-9]{1,6})$/.test(n)) return n
+  if (/\.([A-Za-z0-9]{1,6})$/.test(n)) return n
   var ext = extOf(f)
   return ext ? n + '.' + ext : n
 }
-function sizeText(n) {
-  var v = Number(n)
-  if (!v || isNaN(v)) return ''
-  if (v < 1024) return v + ' B'
-  if (v < 1024 * 1024) return (v / 1024).toFixed(0) + ' KB'
-  return (v / 1024 / 1024).toFixed(1) + ' MB'
-}
 /** 命中片段里的高亮：截断到 length 且把查询词包起来（WeKnora 不给 matched_content 时用） */
 function snippet(text, limit) {
-  var s = String(text || '').replace(/\\s+/g, ' ').trim()
+  var s = String(text || '').replace(/\s+/g, ' ').trim()
   if (!s) return ''
   var max = limit || 320
   return s.length > max ? s.slice(0, max) + '…' : s

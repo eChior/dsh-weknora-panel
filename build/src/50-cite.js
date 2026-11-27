@@ -432,67 +432,6 @@ function probeLayout(tag) {
 // 为什么是浮层而不是右侧栏 tab：
 //   tab 的内容是文档流里的普通元素，高度会参与宿主布局，PDF 一多就把整页顶高；
 //   shell.overlay 是 fixed 的整页浮层，完全不占文档流，从机制上不可能撑高宿主。
-var CITE_OVL = { visible: false, chunkId: '', doc: '', subs: [] }
-var CITE_OVL_READY = false
-
-function citeOvlSet(patch) {
-  if (patch) {
-    for (var k in patch) { if (Object.prototype.hasOwnProperty.call(patch, k)) CITE_OVL[k] = patch[k] }
-  }
-  var subs = CITE_OVL.subs.slice()
-  for (var i = 0; i < subs.length; i++) { try { subs[i]() } catch (e) { /* 单个订阅者出错忽略 */ } }
-}
-
-function openCiteOverlay(detail) {
-  citeOvlSet({ visible: true, chunkId: String(detail.chunkId || ''), doc: String(detail.doc || '') })
-}
-
-function CiteOverlay() {
-  var st = React.useState(0)
-  var bump = st[1]
-  React.useEffect(function () {
-    CITE_OVL.subs.push(bump)
-    function onKey(ev) { if (ev && ev.key === 'Escape') citeOvlSet({ visible: false }) }
-    window.addEventListener('keydown', onKey)
-    return function () {
-      var i = CITE_OVL.subs.indexOf(bump)
-      if (i >= 0) CITE_OVL.subs.splice(i, 1)
-      window.removeEventListener('keydown', onKey)
-    }
-  }, [])
-  if (!CITE_OVL.visible || !CITE_OVL.chunkId) return null
-  return h('div', {
-    className: 'dsh-wk-ovl',
-    onClick: function (e) { if (e.target === e.currentTarget) citeOvlSet({ visible: false }) }
-  },
-    h('div', { className: 'dsh-wk-ovl-card' },
-      h('div', { className: 'dsh-wk-ovl-h' },
-        h('span', { className: 'dsh-wk-ovl-t', title: CITE_OVL.doc }, CITE_OVL.doc || '原文'),
-        h('button', {
-          className: 'dsh-wk-x',
-          onClick: function () { citeOvlSet({ visible: false }) }
-        }, '✕')),
-      h('div', { className: 'dsh-wk-ovl-b' },
-        h(CiteTabBodyInner, { chunkId: CITE_OVL.chunkId, doc: CITE_OVL.doc }))))
-}
-
-function registerCiteOverlay(ctx) {
-  try {
-    if (!ctx || !ctx.slots) return false
-    ctx.effect(function () {
-      return ctx.slots.inject('shell.overlay', function () {
-        return ctx.slots.register({ name: 'shell.overlay', id: 'dsh-weknora-cite-overlay' }, CiteOverlay)
-      })
-    }, 'dsh-weknora: 原文浮层')
-    CITE_OVL_READY = true
-    console.log('[dsh-weknora] 原文浮层已注册（shell.overlay）')
-    return true
-  } catch (e) {
-    console.warn('[dsh-weknora] 原文浮层注册失败：', e && e.message)
-    return false
-  }
-}
-
 // ── 右侧栏 tab 类型注册 ─────────────────────────────────────────────
 // SidebarRightTabRegistry.register() 的副作用写在它自己所属插件（ui-sidebar-right）的
 // ctx.effect 里，跨插件调用时不会执行，所以只调 register() 不会让 placeTab 找得到类型。
@@ -821,15 +760,30 @@ function CiteTabBodyInner(props) {
   var fm = React.useState({}); var fileMeta = fm[0], setFileMeta = fm[1]
   var rd = React.useState(false); var pageReady = rd[0], setPageReady = rd[1]
 
+  // 当前正在展示的文档（ref 里永远是最新值，effect 闭包读不到 update 后的 state）
+  var knowRef = React.useRef('')
+
   React.useEffect(function () {
     var alive = true
     if (!chunkId) { setS({ loading: false, error: '没有传到 chunk id', doc: doc || '', items: [], focusId: '' }); return function () {} }
-    setS({ loading: true, error: '', doc: doc || '', items: [], focusId: chunkId })
+    // 已经展示过文档时不进 loading：那一步会把整个预览子树 return 掉，
+    // 已经排版好的 Word、已经建好的 Excel 表格都会被卸载重建，
+    // 用户看到的就是「每点一个角标就重新打开一次」+「不会跳到命中处」。
+    setS(function (prev) {
+      if (prev.knowledgeId) return Object.assign({}, prev, { focusId: chunkId, error: '' })
+      return Object.assign({}, prev, { loading: true, error: '', focusId: chunkId })
+    })
     api('/chunk?id=' + encodeURIComponent(chunkId)).then(function (r) {
       if (!alive) return null
       if (!r || !r.ok) throw new Error((r && r.message) || '取不到这段原文')
       var kid = r.knowledge_id || ''
       var kbId = r.knowledge_base_id || ''
+      if (kid && kid === knowRef.current) {
+        // 同一篇：只把命中位置指过去，正文与原件保持不动。
+        setS(function (prev) { return Object.assign({}, prev, { loading: false, focusId: chunkId }) })
+        return null
+      }
+      knowRef.current = kid
       api('/file?id=' + encodeURIComponent(kid)).then(function (fr) {
         if (alive && fr && fr.ok && fr.file) setFileMeta(fr.file)
       }).catch(function () { /* 拿不到就按标题推 */ })

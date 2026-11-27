@@ -103,16 +103,26 @@ function DocxView(props) {
       if (!alive) return
       var n = locateDocx(el, loc, props.needle, undoRef)
       setS(function (prev) { return Object.assign({}, prev, { marks: n }) })
-      // renderAsync 刚结束时字体、缩放还没落定，rect 可能为 0，
-      // 这时滚过去等于没滚。稍后再滚一次。
+      // renderAsync 刚返回时字体/图片/zoom 都还没落定，rect 可能是 0 或者算在
+      // 旧布局上；zoom 又是 el.style.zoom（会整体改变文档高度），一次滚动很容易
+      // 被后续布局变化作废。所以分几个时间点重试，并且只在命中处不在可视区时滚。
       if (n) {
-        setTimeout(function () {
-          if (!alive) return
-          try {
-            var first = (undoRef.lastRange) || null
-            if (first) srcReveal(el, first)
-          } catch (e) { /* 忽略 */ }
-        }, 450)
+        ;[450, 1200, 2500].forEach(function (delay) {
+          setTimeout(function () {
+            if (!alive) return
+            try {
+              var first = undoRef.lastRange
+              if (!first) return
+              var r = first.getBoundingClientRect()
+              if (!r || (!r.width && !r.height)) return
+              var sc = srcScrollParent(first.startContainer && first.startContainer.parentElement, el) || el
+              var sb = sc.getBoundingClientRect()
+              // 已经在可视区里就别再滚，免得把用户手动滚动的位置抢回去
+              if (r.top >= sb.top && r.bottom <= sb.bottom) return
+              srcReveal(el, first)
+            } catch (e) { /* 忽略 */ }
+          }, delay)
+        })
       }
     })().catch(function () { /* 定位失败不影响查看 */ })
     return function () { alive = false }

@@ -704,13 +704,29 @@ mark.source-locate-mark {
   var waited = 0   // 等文档就绪：最多 3 分钟
   var tries = 0    // 真正尝试设置：最多 60 次
   var done = false
+  var tickTimer = null
+  var markTimer = null
+  var markIdle = 0
+  var markLast = -1
+  function stopTick() {
+    done = true
+    if (tickTimer !== null) { clearInterval(tickTimer); tickTimer = null }
+  }
+  // 标记数连续 5 轮不再变化就说明命中已标完，停掉扫描。
+  function watchMarkIdle() {
+    if (markTimer === null) return
+    var n = 0
+    try { n = document.querySelectorAll('[data-wk-hl="1"]').length } catch (e) { n = 0 }
+    if (n === markLast) { markIdle += 1 } else { markIdle = 0; markLast = n }
+    if (markIdle >= 5) { clearInterval(markTimer); markTimer = null }
+  }
   function kick() {
     if (done) return
     var app = window.PDFViewerApplication
     var pv = app && app.pdfViewer
-    if (!pv || !pv.pagesCount) { if (++waited > 600) done = true; return }
-    if (app.isInitialViewSet) { done = true; return }
-    if (++tries > 60) { done = true; return }
+    if (!pv || !pv.pagesCount) { if (++waited > 600) stopTick(); return }
+    if (app.isInitialViewSet) { stopTick(); return }
+    if (++tries > 60) { stopTick(); return }
     var page = 1
     var zoom = 'page-width'
     try {
@@ -725,7 +741,7 @@ mark.source-locate-mark {
     try { pv.currentScaleValue = zoom } catch (e) {}
     try { if (page > 1 && pv.currentPageNumber !== page) pv.currentPageNumber = page } catch (e) {}
     try { pv.update() } catch (e) {}
-    if (String(pv.currentScaleValue) === String(zoom) && tries > 1) done = true
+    if (String(pv.currentScaleValue) === String(zoom) && tries > 1) stopTick()
     if (tries === 1) setTimeout(markAll, 400)
   }
 
@@ -737,8 +753,11 @@ mark.source-locate-mark {
       app.eventBus.on('pagesinit', function () { setTimeout(kick, 80) })
       app.eventBus.on('pagesloaded', function () { setTimeout(kick, 80) })
     }
-    setInterval(kick, 300)
-    setInterval(markAll, 700)
+    // 两个定时器都要能停下来：每开一个预览就留一个永不清理的 interval，
+    // 同时开着几个预览就是持续的 CPU 开销。
+    tickTimer = setInterval(kick, 300)
+    markTimer = setInterval(markAll, 700)
+    setInterval(watchMarkIdle, 1200)
     kick()
     markAll()
   }
